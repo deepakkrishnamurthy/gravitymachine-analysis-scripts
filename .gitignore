@@ -110,3 +110,6 @@ venv.bak/
 *.jpeg
 *.jpg
 *.pkl
+
+# mac 
+.DS_Store
