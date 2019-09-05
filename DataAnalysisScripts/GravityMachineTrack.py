@@ -19,8 +19,6 @@ import pickle
 plt.close("all")
 from PIL import Image
 import imp
-import Track
-imp.reload(Track)
 import numpy as np
 import csv_tool as csv
 import pandas as pd
@@ -28,13 +26,16 @@ import seaborn as sns
 import matplotlib.colors as Colors
 import rangeslider_functions
 import cv2
+# For file-dialogs
+import tkinter as tk
 from tkinter import filedialog
-from tkinter import *
 from scipy.ndimage.filters import uniform_filter1d
 
+from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit, QFileDialog
 
-import PIV_Functions
-imp.reload(PIV_Functions)
+
+
+import PIVanalysis.PIV_Functions as PIV_Functions
 
 def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label = None):
     ax = ax if ax is not None else plt.gca()
@@ -194,9 +195,9 @@ class gravMachineTrack:
             self.OrgDim = orgDim
         
         # Initialize a suitable tracker
-        tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+#        tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
 
-        self.initializeTracker('CSRT')
+#        self.initializeTracker('CSRT')
         
        #  If the compute Displacement flag is True then calclate the true displacement using the PIV based velocities
         if(computeDisp):
@@ -212,7 +213,7 @@ class gravMachineTrack:
         if(fileName is None):
             fileName =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("CSV files","*.csv"),("all files","*.*")))
         
-
+        
         self.path, self.trackFile = os.path.split(fileName)        
 #        self.path = QtGui.QFileDialog.getExistingDirectory(None, "Open dataset folder")
         

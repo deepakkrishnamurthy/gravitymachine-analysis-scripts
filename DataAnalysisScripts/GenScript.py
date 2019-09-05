@@ -22,14 +22,21 @@ import matplotlib.pyplot as plt
 
 print(1)
 
-Tmin = 160
+Tmin = 0
 Tmax = 0
 
 #File = '/Users/deepak/Dropbox/GravityMachine/DiatomTestDataset/track000.csv'
 ###
 
+#File = '/Volumes/GM-SSD-1/Monterey_2019/2019_08_22/Misc/track1/track000.csv'
+
+File = '/Volumes/GM-SSD-1/Monterey_2019/2018_08_15/dino20/track001.csv'
+
 # orgDim in mm
-track = GravityMachineTrack.gravMachineTrack(organism = 'Wailesii', condition = 'Replete', Tmin = Tmin, Tmax = Tmax, computeDisp = True, orgDim = 0.1, overwrite_piv=False, overwrite_velocity=False, scaleFactor = 10)
+#track = GravityMachineTrack.gravMachineTrack(organism = 'Wailesii', condition = 'Replete', Tmin = Tmin, Tmax = Tmax, computeDisp = True, orgDim = 0.1, overwrite_piv=False, overwrite_velocity=False, scaleFactor = 10)
+
+track = GravityMachineTrack.gravMachineTrack(fileName = File, Tmin = Tmin, Tmax = Tmax, computeDisp = False, orgDim = 0.1, overwrite_piv=False, overwrite_velocity=False, scaleFactor = 10)
+
 ##
 #mean_vel_z = np.nanmean(track.Vz)
 #std_vel_z = np.nanstd(track.Vz)
@@ -60,11 +67,11 @@ track = GravityMachineTrack.gravMachineTrack(organism = 'Wailesii', condition = 
 ##    print(track.df['Time'][ii], track.df['Image name'][ii])
 #    
 #
-# Plot the original velocity and the corrected velocity
+# Plot the original and corrected displacements
 plt.figure()
 
 plt.plot(track.df['Time'], track.df['ZobjWheel'], 'ro')
-plt.plot(track.df['Time'][track.imageIndex_array], track.Z_objFluid, 'bs')
+#plt.plot(track.df['Time'][track.imageIndex_array], track.Z_objFluid, 'bs')
 
 plt.xlabel('Time (s)')
 plt.ylabel('Z displacement (mm)')
@@ -75,7 +82,7 @@ plt.show()
 plt.figure()
 
 plt.plot(track.df['Time'], track.Vz, 'ro')
-plt.plot(track.df['Time'][track.imageIndex_array], track.Vz_objFluid, 'bs')
+#plt.plot(track.df['Time'][track.imageIndex_array], track.Vz_objFluid, 'bs')
 
 plt.xlabel('Time (s)')
 plt.ylabel('Z velocity (mm /s)')
@@ -83,17 +90,17 @@ plt.ylabel('Z velocity (mm /s)')
 plt.show()
 
 
-track.saveAnalysisData(overwrite = True)
-
-plt.figure()
-
-plt.plot(track.df_analysis['Time'], track.df_analysis['Zpos_raw'], 'ro')
-plt.plot(track.df_analysis['Time'], track.df_analysis['Zpos'], 'bs')
-
-plt.xlabel('Time (s)')
-plt.ylabel('Z displacement (mm)')
-
-plt.show()
+#track.saveAnalysisData(overwrite = True)
+#
+#plt.figure()
+#
+#plt.plot(track.df_analysis['Time'], track.df_analysis['Zpos_raw'], 'ro')
+#plt.plot(track.df_analysis['Time'], track.df_analysis['Zpos'], 'bs')
+#
+#plt.xlabel('Time (s)')
+#plt.ylabel('Z displacement (mm)')
+#
+#plt.show()
 
 ## Plot the original velocity and the corrected velocity
 #plt.figure()

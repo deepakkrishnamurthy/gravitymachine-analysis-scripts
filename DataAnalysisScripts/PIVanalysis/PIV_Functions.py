@@ -12,7 +12,6 @@ import openpiv.process
 import numpy as np
 import openpiv.validation
 import openpiv.filters
-import csv as csv
 import openpiv.tools
 import openpiv.process
 import openpiv.scaling
@@ -22,20 +21,11 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import cmocean
-import os
-import time
-import scipy
 import scipy.ndimage as ndimage
-import smoothn
-from roipoly import roipoly
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 import pickle
 plt.close("all")
 from PIL import Image
-import imp
-import Track
-imp.reload(Track)
-import FigureParameters
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 #==============================================================================
 # General Funtions
