@@ -5,14 +5,15 @@ Mean-Squared-Displacement Analyzer for multiple tracks
 @author: deepak90
 """
 import numpy as np
-import Track
+# import Track
 import os
 import imp
 import matplotlib.pyplot as plt
 import scipy.interpolate as interpolate
 from cycler import cycler
-
-imp.reload(Track)
+import pandas as pd
+import GravityMachineTrack
+imp.reload(GravityMachineTrack)
 
 def squaredDisp(data):
     
@@ -396,107 +397,18 @@ class msdanalyzer:
         
         
 
-def main():
+# def main():
     
   
-    #--------------------------------------------------------------------------
-    # Dendraster
-    #--------------------------------------------------------------------------
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_11/Dendraster_starved_11Days_nofood'
-#    TrackNames = {0:['Dendraster1',87,417], 1:['Dendraster2',0,0], 2:['Dendraster3',0,0]}     
-        
-    
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_11/Dendraster_starved_11Days_withfood'
-#    TrackNames = {0:['Dendraster1',87,417], 1:['Dendraster2',0,0], 0:['Dendraster3',0,0]}     
-
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_11/Dendraster_well_fed_11Days_nofood'
-#    TrackNames = {0:['Dendraster1',0,600], 1:['Dendraster2',0,200], 2:['Dendraster3',0,0]}     
-
-    #--------------------------------------------------------------------------
-    # Sea cucumber
-    #--------------------------------------------------------------------------
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_07/SeaCucumber'
-    
-#    TrackNames = {0:['seacucmber4_auto_verylong_goodtrack', 0,0], 1:['seacucmber9_Auto', 0,0]}
-    
-#    TrackNames = {0:['seacucmber4_auto_verylong_goodtrack', 0,0]}
-    
-    
-    #--------------------------------------------------------------------------
-    # Sea Urchin
-    #--------------------------------------------------------------------------
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_06/SeaUrchin'
-
-#    TrackNames = {0: ['SeaUrchin5',0,0],1: ['SeaUrchin7',0,500],2: ['SeaUrchin8',0,0]}
-
-    #--------------------------------------------------------------------------
-    # Acorn Worm
-    #--------------------------------------------------------------------------
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_06/AcornWorm_Experiment2_nolight'
-#    TrackNames = {0: ['AcornWorm2',0,0],1: ['AcornWorm3',0,0],2: ['AcornWorm4',0,0],3: ['AcornWorm7',0,0]}
-#    --------------------------------------------------------------------------
-    # Brittle Star
-    #--------------------------------------------------------------------------
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/BrittleStar'
-    
-#    TrackNames = {0:['BrittleStar1',0,0],1:['BrittleStar9_Long_Good_Ytracking',0,0],2:['BrittleStar10_Ytracking_Good',0,0],3:['BrittleStar12_Ytracking_Good',0,0]}
-    #--------------------------------------------------------------------------
-    # Snail
-    #--------------------------------------------------------------------------
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_13/Snail'
-    
-#    TrackNames = {0:['snail1',0,575],1:['snail2',0,0],2:['snail4',0,0],3:['snail6',0,0],4:['snail8',0,0],5:['snail10',0,0],6:['snail13',0,0]}
-    #--------------------------------------------------------------------------
-    # Starfish
-    #--------------------------------------------------------------------------
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_12/Starfish'
-#    TrackNames = {0:['StarFish1', 0,162],1:['StarFish6', 0,600],2:['StarFish7', 60,0],3:['StarFish9', 0,290]}
-
-    
-    # Polychaete
-    
-    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_12/Polychaete_4D'
-    TrackNames = {0:['Polychaete1',0,112],1:['Polychaete2',0,113], 2:['Polychaete3',0,37], 3:['Polychaete4',0,55], 4:['Polychaete6',0,113]}
 
     
     
-#    dataFolder = '/Volumes/GRAVMACH1/HopkinsEmbroyologyCourse_GoodData/2018_06_14/Noctiluca'
-#    
-#    TrackNames = {0:['Noctilica6',50,0],1:['Noctilica7',0,1000]}
-#    
-    TrackFile = 'track_mod.csv'
-    
-    *rest,orgName = os.path.split(dataFolder)
-    saveFolder = '/Users/deepak/Dropbox/GravityMachine/GravityMachineManuscript/EnsembleTrackStatistics'
     
     
     
     
-    TrackArray = []
-    
-    for ii, currFolder in TrackNames.items():
-        path = os.path.join(dataFolder, TrackNames[ii][0])
-        
-        TrackArray.append(Track.GravMachineTrack(path, TrackFile, TrackNames[ii][1],TrackNames[ii][2]))
-
-    
-    
-    msd1 = msdanalyzer(TrackArray)
-    
-    
-#    msd1 = msdanalyzer(testFlag=0)
-    
-    msd1.computeMSD()
-    
-    msd1.plotMSD(figname = 1, saveFolder = saveFolder,orgName = orgName)
-    
-    
-    
-    
-    
-    
-if __name__ == '__main__':
-    main()    
+# if __name__ == '__main__':
+#     main()    
         
 
         

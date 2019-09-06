@@ -6,24 +6,13 @@ Created on Fri Feb  1 01:04:22 2019
 """
 
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import cmocean
 import os
-import time
 import scipy
-import scipy.ndimage as ndimage
 from roipoly import roipoly
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-from matplotlib.lines import Line2D
 import pickle
 plt.close("all")
-from PIL import Image
-import imp
 import numpy as np
-import csv_tool as csv
 import pandas as pd
-import seaborn as sns
-import matplotlib.colors as Colors
 import rangeslider_functions
 import cv2
 # For file-dialogs
@@ -31,7 +20,6 @@ import tkinter as tk
 from tkinter import filedialog
 from scipy.ndimage.filters import uniform_filter1d
 
-from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit, QFileDialog
 
 
 
@@ -52,7 +40,7 @@ def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label = None):
 
 class gravMachineTrack:
 
-    def __init__(self, fileName = None, organism = 'Plankton', condition = 'Control', root = None, Tmin=0, Tmax=0, frame_min = None, frame_max = None, indexing = 'time', computeDisp = False, findDims = False, orgDim = None, overwrite_piv = False, overwrite_velocity = False, scaleFactor = 20, localTime = 0, trackDescription = 'Normal'):
+    def __init__(self, trackFile = None, organism = 'Plankton', condition = 'Control', Tmin=0, Tmax=0, frame_min = None, frame_max = None, indexing = 'time', computeDisp = False, findDims = False, orgDim = None, overwrite_piv = False, overwrite_velocity = False, scaleFactor = 20, localTime = 0, trackDescription = 'Normal'):
         
         self.Organism = organism
         self.Condition = condition
@@ -71,10 +59,14 @@ class gravMachineTrack:
         self.frame_min = frame_min
         self.frame_max = frame_max
         
+        if(trackFile is not None):
+            self.trackFile = trackFile  # Full, absolute path to the track csv file being analyzed
+
+
         self.path = None
         
         # Opens a Folder and File dialog for choosing the dataset for analysis
-        self.openFile(fileName = fileName)
+        self.openFile(fileName = self.trackFile)
         
         self.imgFormat = '.svg'
         self.root, *rest = os.path.split(self.path)
@@ -86,6 +78,7 @@ class gravMachineTrack:
         
         print(self.ColumnNames)
         
+        # Variable naming convention
         # X position of object (wrt lab)
         self.Xobj_name = 'Xobj'
         # Y position of object (wrt lab)
@@ -95,6 +88,16 @@ class gravMachineTrack:
         # Z position relative to image center
         self.Zobj_name = 'Zobj'
         
+
+        if self.Xobj_name  not in self.ColumnNames:
+
+            self.Xobj_name = 'Xobjet'
+            # Y position of object (wrt lab)
+            self.Yobj_name = 'Yobjet'
+            # X position relative to image center
+            self.XobjImage_name = 'Xobj_image'
+            # Z position relative to image center
+            self.Zobj_name = 'Zobjet'
 
         
         
@@ -212,11 +215,12 @@ class gravMachineTrack:
         
         if(fileName is None):
             fileName =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("CSV files","*.csv"),("all files","*.*")))
-        
-        
+       
+        # self.path contains the absolute path to the track file folder
         self.path, self.trackFile = os.path.split(fileName)        
 #        self.path = QtGui.QFileDialog.getExistingDirectory(None, "Open dataset folder")
         
+        # File name for saving the analyzed data
         self.analysis_save_path = os.path.join(self.path, self.trackFile[0:-4]+'_{}_{}'.format(round(self.Tmin), round(self.Tmax)) + '_analysis.csv')
         
         
@@ -463,15 +467,11 @@ class gravMachineTrack:
         else:
             return None
     
-    def computeVelocity(self):
-        self.Vx= np.zeros(self.trackLen)
-        self.Vy= np.zeros(self.trackLen)
-        self.Vz= np.zeros(self.trackLen)
-        self.Vz_objLab = np.zeros(self.trackLen)
-        self.Theta_dot = np.zeros(self.trackLen)
-        
+    def velocity_central_diff(self):
+
         for i in range(0,self.trackLen):
-            
+                
+                
             if(i==0):
                 # Forward difference at the start points
                 self.Vx[i] = (self.df[self.Xobj_name][i+1]-self.df[self.Xobj_name][i])/(self.df['Time'][i+1]-self.df['Time'][i])
@@ -504,6 +504,17 @@ class gravMachineTrack:
 
                 self.Theta_dot[i] = (self.df['ThetaWheel'][i+1]-self.df['ThetaWheel'][i-1])/(self.df['Time'][i+1]-self.df['Time'][i-1])
 
+
+
+    def computeVelocity(self):
+        self.Vx= np.zeros(self.trackLen)
+        self.Vy= np.zeros(self.trackLen)
+        self.Vz= np.zeros(self.trackLen)
+        self.Vz_objLab = np.zeros(self.trackLen)
+        self.Theta_dot = np.zeros(self.trackLen)
+        
+        # Try to calculate the velocities
+        self.velocity_central_diff()
             
         # Smooth the velocity data to only keep frequencies 10 times lower than the sampling frequency (low-pass filter)
         self.Vx = self.smoothSignal(self.Vx, window_time = self.window_time)
