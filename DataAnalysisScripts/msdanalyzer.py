@@ -13,37 +13,28 @@ import scipy.interpolate as interpolate
 from cycler import cycler
 import pandas as pd
 import GravityMachineTrack
+import PlotFunctions.PlotUtils as PlotUtils
 imp.reload(GravityMachineTrack)
+from lmfit import minimize, Parameters
 
 def squaredDisp(data):
     
     return (data - data[0])**2
 
-def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label = None):
-    ax = ax if ax is not None else plt.gca()
-    if color is None:
-        color = 'k'
-#        color = ax._get_lines.color_cycle.next()
-    if np.isscalar(yerr) or len(yerr) == len(y):
-        ymin = y - yerr
-        ymax = y + yerr
-    elif len(yerr) == 2:
-        ymin, ymax = yerr
-    ax.plot(x, y, color=color, label = label)
-    ax.fill_between(x, ymax, ymin, color=color, alpha=alpha_fill)
-
 class msdanalyzer:
     
-    def __init__(self, Tracks = None, nDims = 3, testFlag = 0):
+    def __init__(self, Tracks = None, nDims = 3, testFlag = False):
         # Tracks is a list of gravity machine tracks
         self.precision = 12
         self.nDims = 3
-        if(testFlag == 1 or Tracks is None):
-            self.maxDelay = 5
+        self.testFlag = testFlag
+        if(self.testFlag == 1 or Tracks is None):
+            self.maxDelay = 50
             self.timeWindow = 1
             # Length of the delays window over which we calculate MSD
             self.tLen = 100
-            self.genTestTraj()
+            # self.genTestTraj()
+            self.genRunTumbleTraj()
             
         else:
             self.Tracks = Tracks
@@ -64,10 +55,10 @@ class msdanalyzer:
         boxSize = 2
         
         timeSteps = 1000
-        DiffCoeff = 1e-3
+        self.DiffCoeff = 100
         dT = 0.05
         
-        k = (DiffCoeff*dT)**(1/2)
+        k = (self.DiffCoeff*dT)**(1/2)
         
         TimeArray = np.array(range(0,timeSteps))*dT
         
@@ -81,11 +72,11 @@ class msdanalyzer:
             
             X = np.cumsum(dX,1)
             
-            Tracks.append(Track.GravMachineTrack())
+            Tracks.append(GravityMachineTrack.gravMachineTrack())
             Tracks[ii].T = TimeArray
             Tracks[ii].X = X[0,:]
             Tracks[ii].Y = X[1,:]
-            Tracks[ii].Z = X[2,:]
+            Tracks[ii].ZobjWheel = X[2,:]
             
         
         self.Tracks = Tracks
@@ -94,6 +85,137 @@ class msdanalyzer:
 #        print(Tracks[0].T)
             
         
+    def genRunTumbleTraj(self, runTime = 1):
+
+
+        Tracks = []
+        
+        self.nTracks = 100
+        
+        timeSteps = 10000
+
+        boxSize = 2
+        
+        dT = 0.1
+
+
+        X_array = np.zeros((self.nDims, self.nTracks, timeSteps))
+        
+        TimeArray = np.array(range(0,timeSteps))*dT
+
+        self.velocity = 1
+
+        # Mean rate of tumbles
+        self.tumble_rate = 0.1
+
+        # Initial particle positions
+        X0 = boxSize*np.random.rand(self.nDims, self.nTracks)
+
+        # Array to store particle orientation
+        P0 = np.zeros((self.nDims, self.nTracks))
+
+        P = np.zeros_like(P0)
+
+        rand_array =np.random.rand(self.nDims - 1, self.nTracks)
+
+        phi = 2*np.pi*rand_array[0,:]
+
+        if(self.nDims>2):
+            q = 2.*rand_array[1,:]-1;
+        else:
+            q = np.zeros((1,self.nTracks))
+
+        cos_theta = q
+        sin_theta = (1-q**2)**(1/2)
+       
+        P0[0,:] = sin_theta*np.cos(phi)
+        P0[1,:] = sin_theta*np.sin(phi)
+        P0[2,:] = cos_theta
+
+        pdot = np.sum(P0*P0, axis = 0)**(1/2)
+
+        P0[0,:] = P0[0,:]/pdot
+        P0[1,:] = P0[1,:]/pdot
+        P0[2,:] = P0[2,:]/pdot
+
+        P = P0
+        X_array[:,:,0] = X0
+
+        print(X_array[:,:,0])
+
+        for ii in range(timeSteps-1):
+
+
+            tumble_rand = np.array(np.random.rand(self.nTracks) <= self.tumble_rate*dT, dtype = 'bool')
+
+          
+
+            N_tumble = np.sum(tumble_rand)
+            print(N_tumble)
+
+            rand_array =np.random.rand(self.nDims - 1, N_tumble)
+
+            phi = 2*np.pi*rand_array[0,:]
+
+            if(self.nDims>2):
+                q = 2.*rand_array[1,:]-1
+            else:
+                q = np.zeros((1,N_tumble))
+
+            cos_theta = q;
+            sin_theta = (1-q**2)**(1/2)
+            
+            P_new = np.zeros((self.nDims, N_tumble))
+
+            P_new[0,:] = sin_theta*np.cos(phi)
+            P_new[1,:] = sin_theta*np.sin(phi)
+            P_new[2,:] = cos_theta
+
+            
+
+            # Update the orientations of particles undergoing a tumble
+            
+            P[:, tumble_rand] = P_new
+
+            pdot = np.sum(P*P, axis = 0)**(1/2)
+
+            # print(pdot)
+
+            P[0,:] = P[0,:]/pdot
+            P[1,:] = P[1,:]/pdot
+            P[2,:] = P[2,:]/pdot
+
+
+
+            X_array[:,:,ii+1] = X_array[:,:,ii] + self.velocity*P*dT
+
+
+        for ii in range(self.nTracks):
+
+            Tracks.append(GravityMachineTrack.gravMachineTrack())
+            Tracks[ii].T = TimeArray
+            Tracks[ii].X = X_array[0,ii,:]
+            Tracks[ii].Y = X_array[1,ii,:]
+            Tracks[ii].ZobjWheel = X_array[2,ii,:]
+
+            if(ii==1):
+                print(Tracks[ii].ZobjWheel)
+                plt.figure()
+                plt.plot(Tracks[ii].T, Tracks[ii].X,'k')
+                plt.show()
+
+
+
+        self.Tracks = Tracks
+        
+        self.delaysCommon = np.linspace(0,self.maxDelay,self.tLen)
+
+
+
+
+
+
+
     def getMinDiff(self):
         
         
@@ -147,11 +269,12 @@ class msdanalyzer:
             TimeArray = np.arange(0,currTrack.T[-1],self.minDiff)
             
             print('...Analyzing Track {} of Duration {} s'.format(ii, np.max(currTrack.T)))
+
             TimeArray = currTrack.T
             
             func_X = interpolate.interp1d(currTrack.T,currTrack.X, kind = 'linear')
-            func_Y = interpolate.interp1d(currTrack.T,currTrack.Y,kind = 'linear')
-            func_Z = interpolate.interp1d(currTrack.T,currTrack.Z,kind = 'linear')
+            func_Y = interpolate.interp1d(currTrack.T,currTrack.Y, kind = 'linear')
+            func_Z = interpolate.interp1d(currTrack.T,currTrack.ZobjWheel, kind = 'linear')
             
             Disp_X.append(func_X(TimeArray))
             Disp_Y.append(func_Y(TimeArray))
@@ -226,7 +349,7 @@ class msdanalyzer:
             
             func_X = interpolate.interp1d(currTrack.T,currTrack.X, kind = 'linear')
             func_Y = interpolate.interp1d(currTrack.T,currTrack.Y,kind = 'linear')
-            func_Z = interpolate.interp1d(currTrack.T,currTrack.Z,kind = 'linear')
+            func_Z = interpolate.interp1d(currTrack.T,currTrack.ZobjWheel,kind = 'linear')
             
             
             
@@ -247,8 +370,6 @@ class msdanalyzer:
 
                 
                 T_start = TimeArray[startIndex]
-                
-                
                 
                 SquaredDisp_X.append(squaredDisp(X_subTrack))
                 SquaredDisp_Y.append(squaredDisp(Y_subTrack))
@@ -334,19 +455,23 @@ class msdanalyzer:
 #------------------------------------------------------------------------------
         # Plotting functions
 #------------------------------------------------------------------------------
-    def plotMSD(self, figname = 1, saveFolder = None, orgName = None):
+    def plotMSD(self, figname = 1, saveFolder = None, orgName = None, plot_analytical = False):
         
         
 #        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
         
-        plt.figure(1, figsize = (8,6))
+        plt.figure(figsize = (8,6))
         ax1 = plt.gca()
-        errorfill(self.delaysCommon, self.MSD_XY, self.stdev_XY, ax = ax1, color = 'r', label = 'Horizontal (XY)')
+        PlotUtils.errorfill(self.delaysCommon, self.MSD_X, self.stdev_X, ax = ax1, color = 'r', label = 'Horizontal (X)')
 
         ax3 = plt.gca()
         
-        errorfill(self.delaysCommon, self.MSD_Z, self.stdev_Z, ax = ax3, color = 'b', label = 'Vertical (Z)')
+        PlotUtils.errorfill(self.delaysCommon, self.MSD_Z, self.stdev_Z, ax = ax3, color = 'b', label = 'Vertical (Z)')
 #        
+        if(plot_analytical==True and self.testFlag==True):
+            ax3.plot(self.delaysCommon, self.DiffCoeff*self.delaysCommon, color = 'k', marker = 'o')
+
+
         ax3.set_xlabel('Time (s)')
         ax3.set_ylabel('MSD')
         plt.xlim(0,np.max(self.delaysCommon))
@@ -360,14 +485,14 @@ class msdanalyzer:
         # 
         time = np.linspace(10,100,100)
         A = 1
-        B=0.01
+        B = 0.01
         X_linear = B*time
         X_quad = A*(time**2)
         
         
-        plt.figure(2, figsize = (4,3))
+        plt.figure(figsize = (4,3))
         ax1 = plt.gca()
-        ax1.plot(self.delaysCommon, self.MSD_XY, color = 'r', label = 'Horizontal (XY)')
+        ax1.plot(self.delaysCommon, self.MSD_X, color = 'r', label = 'Horizontal (X)')
         ax1.set_yscale('log')
         ax1.set_xscale('log')
         
@@ -388,6 +513,12 @@ class msdanalyzer:
             plt.savefig(os.path.join(saveFolder,orgName+'_MSD_Log.svg'),bbox_inches='tight',dpi=150)
 
         plt.show()
+
+
+
+
+
+
         
         
         

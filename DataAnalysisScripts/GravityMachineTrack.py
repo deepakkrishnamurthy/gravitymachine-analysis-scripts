@@ -15,13 +15,14 @@ import numpy as np
 import pandas as pd
 import rangeslider_functions
 import cv2
+
+import scipy.interpolate as interpolate
+
 # For file-dialogs
 import tkinter as tk
 from tkinter import filedialog
 from scipy.ndimage.filters import uniform_filter1d
-
-
-
+import imageprocessing.imageprocessing_utils as ImageProcessing
 
 import PIVanalysis.PIV_Functions as PIV_Functions
 
@@ -44,7 +45,8 @@ class gravMachineTrack:
         
         self.Organism = organism
         self.Condition = condition
-        
+        # Flag for initialzing an empty track dataset
+        self.emptyTrack = None
         # Local Time when the track was measured
         self.localTime = localTime
         
@@ -59,8 +61,8 @@ class gravMachineTrack:
         self.frame_min = frame_min
         self.frame_max = frame_max
         
-        if(trackFile is not None):
-            self.trackFile = trackFile  # Full, absolute path to the track csv file being analyzed
+        
+        self.trackFile = trackFile  # Full, absolute path to the track csv file being analyzed
 
 
         self.path = None
@@ -68,200 +70,210 @@ class gravMachineTrack:
         # Opens a Folder and File dialog for choosing the dataset for analysis
         self.openFile(fileName = self.trackFile)
         
-        self.imgFormat = '.svg'
-        self.root, *rest = os.path.split(self.path)
+        self.initializeTrack()
         
-        # Read the CSV file as a pandas dataframe
-        self.df = pd.read_csv(os.path.join(self.path, self.trackFile))
-        
-        self.ColumnNames = list(self.df.columns.values)
-        
-        print(self.ColumnNames)
-        
-        # Variable naming convention
-        # X position of object (wrt lab)
-        self.Xobj_name = 'Xobj'
-        # Y position of object (wrt lab)
-        self.Yobj_name = 'Yobj'
-        # X position relative to image center
-        self.XobjImage_name = 'Xobj_image'
-        # Z position relative to image center
-        self.Zobj_name = 'Zobj'
-        
-
-        if self.Xobj_name  not in self.ColumnNames:
-
-            self.Xobj_name = 'Xobjet'
+        if(self.emptyTrack is False):
+            self.imgFormat = '.svg'
+            self.root, *rest = os.path.split(self.path)
+            
+            # Read the CSV file as a pandas dataframe
+            self.df = pd.read_csv(os.path.join(self.path, self.trackFile))
+            
+            self.ColumnNames = list(self.df.columns.values)
+            
+            print(self.ColumnNames)
+            
+            # Variable naming convention
+            # X position of object (wrt lab)
+            self.Xobj_name = 'Xobj'
             # Y position of object (wrt lab)
-            self.Yobj_name = 'Yobjet'
+            self.Yobj_name = 'Yobj'
             # X position relative to image center
             self.XobjImage_name = 'Xobj_image'
             # Z position relative to image center
-            self.Zobj_name = 'Zobjet'
+            self.Zobj_name = 'Zobj'
+            
 
-        
-        
-        # Make T=0 as the start of the track
-        self.df['Time'] = self.df['Time'] - self.df['Time'][0]
-        
-        # Crop the track based on time or frame based indexing
-        if(indexing == 'time'):
-            # Crop the track based on the specified time limits
-            if(Tmax==0):
-                Tmax = np.max(self.df['Time'])
+            if self.Xobj_name  not in self.ColumnNames:
+
+                self.Xobj_name = 'Xobjet'
+                # Y position of object (wrt lab)
+                self.Yobj_name = 'Yobjet'
+                # X position relative to image center
+                self.XobjImage_name = 'Xobj_image'
+                # Z position relative to image center
+                self.Zobj_name = 'Zobjet'
+
+            
+            
+            # Make T=0 as the start of the track
+            self.df['Time'] = self.df['Time'] - self.df['Time'][0]
+            
+            # Crop the track based on time or frame based indexing
+            if(indexing == 'time'):
+                # Crop the track based on the specified time limits
+                if(Tmax==0):
+                    Tmax = np.max(self.df['Time'])
+                            
+                Tmin_index = next((i for i,x in enumerate(self.df['Time']) if x >= Tmin), None)
+                Tmax_index = next((i for i,x in enumerate(self.df['Time']) if x >= Tmax), None)
+                  
+                print(Tmin_index)
+                print(Tmax_index)
                         
-            Tmin_index = next((i for i,x in enumerate(self.df['Time']) if x >= Tmin), None)
-            Tmax_index = next((i for i,x in enumerate(self.df['Time']) if x >= Tmax), None)
-              
-            print(Tmin_index)
-            print(Tmax_index)
+                
+                self.df = self.df[Tmin_index:Tmax_index]
+                
+            elif(indexing == 'frame'):
+                if(frame_min is None):
+                    # Set frame_min to the the first available image index
+                    frame_min = self.df['Image name'][self.imageIndex[0]]
+                if(frame_max is None):
+                    # Set frame_min to the the last available image index
+                    frame_max = self.df['Image name'][self.imageIndex[-1]]
                     
-            
-            self.df = self.df[Tmin_index:Tmax_index]
-            
-        elif(indexing == 'frame'):
-            if(frame_min is None):
-                # Set frame_min to the the first available image index
-                frame_min = self.df['Image name'][self.imageIndex[0]]
-            if(frame_max is None):
-                # Set frame_min to the the last available image index
-                frame_max = self.df['Image name'][self.imageIndex[-1]]
+                    
+                # Crop the track based on the start and end frames
+                index_min = int(np.where(np.in1d(self.df['Image name'], frame_min))[0])
+                index_max = int(np.where(np.in1d(self.df['Image name'], frame_max))[0])
                 
+                print(index_min)
+                print(index_max)
                 
-            # Crop the track based on the start and end frames
-            index_min = int(np.where(np.in1d(self.df['Image name'], frame_min))[0])
-            index_max = int(np.where(np.in1d(self.df['Image name'], frame_max))[0])
-            
-            print(index_min)
-            print(index_max)
-            
-            self.df = self.df[index_min:index_max]
-            
-        
-        df_index = self.df.index.values
-        
-        
-        df_index = df_index - df_index[0]
-    
-        self.df = self.df.set_index(df_index)
-        
-        
-        self.df['ZobjWheel'] = self.df['ZobjWheel'] - self.df['ZobjWheel'][0]
-        
-        self.trackLen = len(self.df)
-        
-        # Find the average sampling frequency
-        self.T = np.linspace(self.df['Time'][0],self.df['Time'][self.trackLen-1], self.trackLen)  # Create a equi-spaced (in time) vector for the data.
-
-        #Sampling Interval
-        self.dT = self.T[1]-self.T[0]
-        self.samplingFreq = 1/float(self.dT)
-        # Window to use for smoothing data. 
-        # IMPORTANT: We only keep variations 10 times slower that the frame rate of data capture.
-        self.window_time = 10*self.dT
-        
-        self.computeVelocity()
-        self.computeAccln()
-
-        try:
-            
-            self.createImageIndex()
-            
-    #        self.setColorThresholds()
-            
-            
-            # PIV parameters
-            self.window_size = 128
-            self.overlap = 64
-            self.searchArea = 128
-            
-     
-            self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
-            
-            self.mmPerPixel = 1/self.pixelPermm
-            
-            print('Pixels per mm: {}'.format(self.pixelPermm))
-            
-            self.PIVfolder = os.path.join(self.path, 'PIVresults_{}px'.format(self.window_size))
-        
-            if(not os.path.exists(self.PIVfolder)):
-                os.makedirs(self.PIVfolder)
-            
-        except:
-            
-            print('Warning: No images found corresponding to track data')
+                self.df = self.df[index_min:index_max]
                 
-        self.scaleFactor = scaleFactor
-        if(findDims):
-            self.findOrgDims(circle=1)
-        else:
-            self.OrgDim = orgDim
+            
+            df_index = self.df.index.values
+            
+            
+            df_index = df_index - df_index[0]
         
-        # Initialize a suitable tracker
-#        tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+            self.df = self.df.set_index(df_index)
+            
+            
+            self.df['ZobjWheel'] = self.df['ZobjWheel'] - self.df['ZobjWheel'][0]
+            
+            self.trackLen = len(self.df)
+            
+            # Find the average sampling frequency
+            self.T = np.linspace(self.df['Time'][0],self.df['Time'][self.trackLen-1], self.trackLen)  # Create a equi-spaced (in time) vector for the data.
 
-#        self.initializeTracker('CSRT')
+
+
+            #Sampling Interval
+            self.dT = self.T[1]-self.T[0]
+            self.samplingFreq = 1/float(self.dT)
+            # Window to use for smoothing data. 
+            # IMPORTANT: We only keep variations 10 times slower that the frame rate of data capture.
+            self.window_time = 10*self.dT
+            
+            self.interp_positions()
+            self.computeVelocity()
+            self.computeAccln()
+
+            try:
+                
+                self.createImageIndex()
+                
+        #        self.setColorThresholds()
+                # PIV parameters
+                self.window_size = 128
+                self.overlap = 64
+                self.searchArea = 128
+                
+                self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
+                
+                self.mmPerPixel = 1/self.pixelPermm
+                
+                print('Pixels per mm: {}'.format(self.pixelPermm))
+                
+                self.PIVfolder = os.path.join(self.path, 'PIVresults_{}px'.format(self.window_size))
+            
+                if(not os.path.exists(self.PIVfolder)):
+                    os.makedirs(self.PIVfolder)
+                
+            except:
+                
+                print('Warning: No images found corresponding to track data')
+                    
+            self.scaleFactor = scaleFactor
+            if(findDims):
+                self.findOrgDims(circle=1)
+            else:
+                self.OrgDim = orgDim
+            
+           #  If the compute Displacement flag is True then calculate the true displacement using the PIV based velocities
+            if(computeDisp):
+                self.FluidVelocitySaveFile = 'fluidVelocityTimeSeries_{}_{}.pkl'.format(self.Tmin, self.Tmax)
+                self.FluidVelocitySavePath = os.path.join(self.path, self.FluidVelocitySaveFile)
+                self.correctedDispVelocity(overwrite_flag=self.overwrite_velocity)
         
-       #  If the compute Displacement flag is True then calclate the true displacement using the PIV based velocities
-        if(computeDisp):
-            self.FluidVelocitySaveFile = 'fluidVelocityTimeSeries_{}_{}.pkl'.format(self.Tmin, self.Tmax)
-            self.FluidVelocitySavePath = os.path.join(self.path, self.FluidVelocitySaveFile)
-            self.correctedDispVelocity(overwrite_flag=self.overwrite_velocity)
-        
+    def initializeTrack(self):
+        self.T = None
+        self.X = None
+        self.Y = None
+        self.ZobjWheel = None
         
     def openFile(self, fileName = None):
         
         print('Opening dataset ...')
         
         if(fileName is None):
-            fileName =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("CSV files","*.csv"),("all files","*.*")))
-       
-        # self.path contains the absolute path to the track file folder
-        self.path, self.trackFile = os.path.split(fileName)        
-#        self.path = QtGui.QFileDialog.getExistingDirectory(None, "Open dataset folder")
+            print('No file supplied, initialzing an empty track')
+            self.emptyTrack = True
         
-        # File name for saving the analyzed data
-        self.analysis_save_path = os.path.join(self.path, self.trackFile[0:-4]+'_{}_{}'.format(round(self.Tmin), round(self.Tmax)) + '_analysis.csv')
+            # fileName =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("CSV files","*.csv"),("all files","*.*")))
         
-        
-        print("Path : {}".format(self.path))
-        
-        if(len(self.path)>0):
-            self.image_dict = {}
-            
-            trackFileNames = []
-            if os.path.exists(self.path):
-    
-                # Walk through the folders and identify ones that contain images
-                for dirs, subdirs, files in os.walk(self.path, topdown=False):
-                   
-                    root, subFolderName = os.path.split(dirs)
-                        
-                    print(subFolderName[0:6])
-                    if('images' in subFolderName):
-                       
-                       for fileNames in files:
-                           key = fileNames
-                           value = subFolderName
-                           self.image_dict[key]=value
-    
-                    if(os.path.normpath(dirs) == os.path.normpath(self.path)):
-                        for fileNames in files:
-                            if('.csv' in fileNames):
-                                trackFileNames.append(fileNames)
-    
-#                if(len(trackFileNames)==0):
-#                    raise FileNotFoundError('CSV track was not found!')      
-#                elif(len(trackFileNames)>=1):
-#                    print('Choose the track file to use!')
-#                                        
-#                    trackFile,*rest = QtGui.QFileDialog.getOpenFileName(None, 'Open track file',self.path,"CSV fles (*.csv)")
-#                    print(trackFile)
-#                    head,self.trackFile = os.path.split(trackFile)
-#                    print('Loaded {}'.format(self.trackFile))
-
         else:
-            print("No dataset chosen")
+
+            # self.path contains the absolute path to the track file folder
+            self.path, self.trackFile = os.path.split(fileName)        
+    #        self.path = QtGui.QFileDialog.getExistingDirectory(None, "Open dataset folder")
+            
+            # File name for saving the analyzed data
+            self.analysis_save_path = os.path.join(self.path, self.trackFile[0:-4]+'_{}_{}'.format(round(self.Tmin), round(self.Tmax)) + '_analysis.csv')
+            
+            
+            print("Path : {}".format(self.path))
+            
+            if(len(self.path)>0):
+                self.image_dict = {}
+                
+                trackFileNames = []
+                if os.path.exists(self.path):
+        
+                    # Walk through the folders and identify ones that contain images
+                    for dirs, subdirs, files in os.walk(self.path, topdown=False):
+                       
+                        root, subFolderName = os.path.split(dirs)
+                            
+                        print(subFolderName[0:6])
+                        if('images' in subFolderName):
+                           
+                           for fileNames in files:
+                               key = fileNames
+                               value = subFolderName
+                               self.image_dict[key]=value
+        
+                        if(os.path.normpath(dirs) == os.path.normpath(self.path)):
+                            for fileNames in files:
+                                if('.csv' in fileNames):
+                                    trackFileNames.append(fileNames)
+
+
+            self.emptyTrack = False
+        
+    #                if(len(trackFileNames)==0):
+    #                    raise FileNotFoundError('CSV track was not found!')      
+    #                elif(len(trackFileNames)>=1):
+    #                    print('Choose the track file to use!')
+    #                                        
+    #                    trackFile,*rest = QtGui.QFileDialog.getOpenFileName(None, 'Open track file',self.path,"CSV fles (*.csv)")
+    #                    print(trackFile)
+    #                    head,self.trackFile = os.path.split(trackFile)
+    #                    print('Loaded {}'.format(self.trackFile))
+
+            
 
     def saveAnalysisData(self, overwrite = True):
 
@@ -288,31 +300,6 @@ class gravMachineTrack:
 
             print('Analysis data does not exist!')
             
-                
-    def initializeTracker(self, tracker_type):
-        major_ver, minor_ver, subminor_ver = cv2.__version__.split('.')
-        
-        print('Using tracker: {}'.format(tracker_type))
-         
-        if int(minor_ver) < 3:
-            self.tracker = cv2.Tracker_create(tracker_type)
-        else:
-            if tracker_type == 'BOOSTING':
-                self.tracker = cv2.TrackerBoosting_create()
-            if tracker_type == 'MIL':
-                self.tracker = cv2.TrackerMIL_create()
-            if tracker_type == 'KCF':
-                self.tracker = cv2.TrackerKCF_create()
-            if tracker_type == 'TLD':
-                self.tracker = cv2.TrackerTLD_create()
-            if tracker_type == 'MEDIANFLOW':
-                self.tracker = cv2.TrackerMedianFlow_create()
-            if tracker_type == 'GOTURN':
-                self.tracker = cv2.TrackerGOTURN_create()
-            if tracker_type == 'MOSSE':
-                self.tracker = cv2.TrackerMOSSE_create()
-            if tracker_type == "CSRT":
-                self.tracker = cv2.TrackerCSRT_create()
     
     def createImageIndex(self):
         # Create an index of all time points for which an image is available
@@ -352,7 +339,7 @@ class gravMachineTrack:
                 image = cv2.imread(os.path.join(self.path,self.image_dict[file],file))
                 
                 
-                orgContour = self.colorThreshold(image = image)
+                orgContour = ImageProcessing.colorThreshold(image = image)
                 
                 if(orgContour is not None):
                 
@@ -413,59 +400,16 @@ class gravMachineTrack:
         print('Organism Minor dimension {} mm'.format(self.OrgMinDim))
         print('*'*50)
 
-    def colorThreshold(self,image):
-    
-        thresh_low = np.array(self.threshLow,dtype='uint8')
-        thresh_high = np.array(self.threshHigh,dtype='uint8')
-        
-   
-        
-        im_th = cv2.inRange(image, thresh_low, thresh_high)
-        
-        kernel3 = np.ones((3,3),np.uint8)
-        kernel5 = np.ones((5,5),np.uint8)
-        kernel7 = np.ones((7,7),np.uint8)
-        kernel15 = np.ones((15,15),np.uint8)
-        
-        
-        im_th = cv2.morphologyEx(im_th, cv2.MORPH_CLOSE, kernel5)
-        
-        im_th = cv2.morphologyEx(im_th, cv2.MORPH_CLOSE, kernel7)
-        
-        im_th = cv2.morphologyEx(im_th, cv2.MORPH_OPEN, kernel7)
-        
-        im_th = cv2.morphologyEx(im_th, cv2.MORPH_CLOSE, kernel15)
-    
-        
-    #    plt.matshow (im_th , cmap=cm.Greys_r )
-    #    plt.show()
-        
-        # Select the largest contour as the final mask
-        cnts = cv2.findContours(im_th,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[-2]
-        
-        print('No:of contours:{}'.format(len(cnts)))
-        
-        if(len(cnts)>0):
-            largestContour = max(cnts, key=cv2.contourArea)
-        
-            M = cv2.moments(largestContour)
-            
-            # Approximate the contour to 1% of its arcLength
-            epsilon = 0.01*cv2.arcLength(largestContour,True)
-            approxContour = cv2.approxPolyDP(largestContour,epsilon,True)
-                    
-            
-    #        orgCentroid = np.array((int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])))
-            
-    #        ellipse = cv2.fitEllipse(approxContour)
-                
-                
-                # in mm
-        
-            return approxContour
-        
-        else:
-            return None
+    def interp_positions(self):
+
+        if(self.T is not None):
+            func_X = interpolate.interp1d(self.df['Time'],self.df[self.Xobj_name], kind = 'linear')
+            func_Y = interpolate.interp1d(self.df['Time'],self.df[self.Yobj_name], kind = 'linear')
+            func_Z = interpolate.interp1d(self.df['Time'],self.df['ZobjWheel'], kind = 'linear')
+
+            self.X = func_X(self.T)
+            self.Y = func_X(self.T)
+            self.ZobjWheel = func_Z(self.T)
     
     def velocity_central_diff(self):
 
@@ -507,9 +451,9 @@ class gravMachineTrack:
 
 
     def computeVelocity(self):
-        self.Vx= np.zeros(self.trackLen)
-        self.Vy= np.zeros(self.trackLen)
-        self.Vz= np.zeros(self.trackLen)
+        self.Vx = np.zeros(self.trackLen)
+        self.Vy = np.zeros(self.trackLen)
+        self.Vz = np.zeros(self.trackLen)
         self.Vz_objLab = np.zeros(self.trackLen)
         self.Theta_dot = np.zeros(self.trackLen)
         
