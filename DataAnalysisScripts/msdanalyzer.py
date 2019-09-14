@@ -16,6 +16,7 @@ import GravityMachineTrack
 import PlotFunctions.PlotUtils as PlotUtils
 imp.reload(GravityMachineTrack)
 from lmfit import minimize, Parameters
+from wlsice.python import wlsice as wlsice
 
 def squaredDisp(data):
     
@@ -23,26 +24,51 @@ def squaredDisp(data):
 
 class msdanalyzer:
     
-    def __init__(self, Tracks = None, nDims = 3, testFlag = False):
+    def __init__(self, Tracks = None, nDims = 3, ensemble_method = 'subtrack', testFlag = False, v = None, tau = None, Organism = None, Condition = None, OrgDim = None, savePath = None):
         # Tracks is a list of gravity machine tracks
         self.precision = 12
         self.nDims = 3
         self.testFlag = testFlag
+        self.Organism = Organism
+        self.Condition = Condition
+        self.OrgDim = OrgDim
+
+        self.savePath = savePath
+
+        # Create sub-folder for each condition
+        self.subFolder = self.Organism + '_' + self.Condition
+
+        # Path to the sub-folder which contains the trajectories
+        self.savePath = os.path.join(self.savePath, self.subFolder)
+
+        if(not os.path.exists(self.savePath)):
+            os.makedirs(self.savePath)
+
+
+        # Two possible ways of calculating ensembles: Over tracks broken into subtracks with a specific max Delay, or over individual tracks with max delay = min (track durations)
+        # subtrack OR mintrack
+        self.ensemble_method = ensemble_method
+
         if(self.testFlag == 1 or Tracks is None):
             self.maxDelay = 50
-            self.timeWindow = 1
+            self.timeWindow = 5
             # Length of the delays window over which we calculate MSD
-            self.tLen = 100
+            self.tLen = 1000
             # self.genTestTraj()
-            self.genRunTumbleTraj()
+            self.genRunTumbleTraj(v = v, tau = tau)
             
         else:
             self.Tracks = Tracks
             self.nTracks = len(Tracks)
              # Maximum delay over which we want to calculate correlations
-            self.maxDelay = 50
+            self.maxDelay = 60
             self.timeWindow = 5
             self.getMinDiff()
+
+            if(ensemble_method == 'mintrack'):
+                # Calculate the min track duration
+                self.getMinTrackDuration()
+
             self.getCommonDelays()
        
         
@@ -85,28 +111,27 @@ class msdanalyzer:
 #        print(Tracks[0].T)
             
         
-    def genRunTumbleTraj(self, runTime = 1):
-
+    def genRunTumbleTraj(self, v = 1, tau = 1):
 
         Tracks = []
         
         self.nTracks = 100
+
+        print('Generating test trajectories for {} swimmers \n with velocity {} and run-time {}'. format(self.nTracks, v, tau))
+
         
-        timeSteps = 10000
+        timeSteps = 5000
 
         boxSize = 2
         
-        dT = 0.1
+        # Time steps for the simulations
+        dT = 0.1*tau
 
+        # ballistic velocity of the swimmers
+        self.velocity = v
 
-        X_array = np.zeros((self.nDims, self.nTracks, timeSteps))
-        
-        TimeArray = np.array(range(0,timeSteps))*dT
-
-        self.velocity = 1
-
-        # Mean rate of tumbles
-        self.tumble_rate = 0.1
+        # Mean rate of tumbles is the inverse of the run-time tau
+        self.tumble_rate = 1/tau
 
         # Initial particle positions
         X0 = boxSize*np.random.rand(self.nDims, self.nTracks)
@@ -114,14 +139,20 @@ class msdanalyzer:
         # Array to store particle orientation
         P0 = np.zeros((self.nDims, self.nTracks))
 
-        P = np.zeros_like(P0)
+        # Arrays to store the time series data
+        X_array = np.zeros((self.nDims, self.nTracks, timeSteps))
+        
+        TimeArray = np.array(range(0,timeSteps))*dT
+
+        # Array to store the orientations of all the swimmers
+        P_array = np.zeros_like(P0)
 
         rand_array =np.random.rand(self.nDims - 1, self.nTracks)
 
         phi = 2*np.pi*rand_array[0,:]
 
         if(self.nDims>2):
-            q = 2.*rand_array[1,:]-1;
+            q = 2*rand_array[1,:]-1;
         else:
             q = np.zeros((1,self.nTracks))
 
@@ -138,10 +169,8 @@ class msdanalyzer:
         P0[1,:] = P0[1,:]/pdot
         P0[2,:] = P0[2,:]/pdot
 
-        P = P0
+        P_array = P0
         X_array[:,:,0] = X0
-
-        print(X_array[:,:,0])
 
         for ii in range(timeSteps-1):
 
@@ -158,11 +187,11 @@ class msdanalyzer:
             phi = 2*np.pi*rand_array[0,:]
 
             if(self.nDims>2):
-                q = 2.*rand_array[1,:]-1
+                q = 2*rand_array[1,:]-1
             else:
                 q = np.zeros((1,N_tumble))
 
-            cos_theta = q;
+            cos_theta = q
             sin_theta = (1-q**2)**(1/2)
             
             P_new = np.zeros((self.nDims, N_tumble))
@@ -175,19 +204,19 @@ class msdanalyzer:
 
             # Update the orientations of particles undergoing a tumble
             
-            P[:, tumble_rand] = P_new
+            P_array[:, tumble_rand] = P_new
 
-            pdot = np.sum(P*P, axis = 0)**(1/2)
+            pdot = np.sum(P_array*P_array, axis = 0)**(1/2)
 
             # print(pdot)
 
-            P[0,:] = P[0,:]/pdot
-            P[1,:] = P[1,:]/pdot
-            P[2,:] = P[2,:]/pdot
+            P_array[0,:] = P_array[0,:]/pdot
+            P_array[1,:] = P_array[1,:]/pdot
+            P_array[2,:] = P_array[2,:]/pdot
 
 
 
-            X_array[:,:,ii+1] = X_array[:,:,ii] + self.velocity*P*dT
+            X_array[:,:,ii+1] = X_array[:,:,ii] + self.velocity*P_array*dT
 
 
         for ii in range(self.nTracks):
@@ -211,8 +240,17 @@ class msdanalyzer:
         self.delaysCommon = np.linspace(0,self.maxDelay,self.tLen)
 
 
+    def getMinTrackDuration(self):
+
+        self.minTrackDuration = 1000000000
+        for ii in range(self.nTracks):
+            currTrack = self.Tracks[ii]
+
+            self.minTrackDuration = min(self.minTrackDuration, currTrack.trackDuration)
 
 
+        print('Min track duration : {} s'.format(self.minTrackDuration))
+        self.maxDelay = self.minTrackDuration
 
 
 
@@ -251,6 +289,7 @@ class msdanalyzer:
         self.tLen = int(self.maxDelay/float(self.minDiff))
         self.delaysCommon = np.linspace(0,self.maxDelay,self.tLen)
         self.delayIndex = np.array(range(0,len(self.delaysCommon)))
+        print(self.delaysCommon)
         
     def DispAtCommonTimes(self):
         
@@ -330,10 +369,8 @@ class msdanalyzer:
         
         self.stdDisp_XY = np.nanstd(Disp_matrix_X + Disp_matrix_Y, axis = 0)
         
-    
-    def computeSqDisp(self):
-        
-        
+    def computeSqDisp_minTrack(self, save = False):
+        # Squared displacements where the MaxDelay is set by the min Track length
         SquaredDisp_X = []
         SquaredDisp_Y = []
         SquaredDisp_Z = []
@@ -348,15 +385,56 @@ class msdanalyzer:
             TimeArray = currTrack.T
             
             func_X = interpolate.interp1d(currTrack.T,currTrack.X, kind = 'linear')
-            func_Y = interpolate.interp1d(currTrack.T,currTrack.Y,kind = 'linear')
-            func_Z = interpolate.interp1d(currTrack.T,currTrack.ZobjWheel,kind = 'linear')
+            func_Y = interpolate.interp1d(currTrack.T,currTrack.Y, kind = 'linear')
+            func_Z = interpolate.interp1d(currTrack.T,currTrack.ZobjWheel, kind = 'linear')
+
+
+            X_subTrack = func_X(self.delaysCommon)
+            Y_subTrack = func_Y(self.delaysCommon)
+            Z_subTrack = func_Z(self.delaysCommon)
+                
+            # if(save_trajectories==True):
+            #     # Save the trajectories
+                
+                
+            SquaredDisp_X.append(squaredDisp(X_subTrack))
+            SquaredDisp_Y.append(squaredDisp(Y_subTrack))
+            SquaredDisp_Z.append(squaredDisp(Z_subTrack))
+
+
+        return SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z
+
+
+            
+            
+
+    
+    def computeSqDisp(self, save = False):
+        
+        
+        SquaredDisp_X = []
+        SquaredDisp_Y = []
+        SquaredDisp_Z = []
+        
+        counter = 0
+        for ii in range(self.nTracks):
+            
+            
+            currTrack = self.Tracks[ii]
+        
+            print('...Analyzing Track {} of Duration {} s'.format(ii, np.max(currTrack.T)))
+            TimeArray = currTrack.T
+            
+            func_X = interpolate.interp1d(currTrack.T,currTrack.X, kind = 'linear')
+            func_Y = interpolate.interp1d(currTrack.T,currTrack.Y, kind = 'linear')
+            func_Z = interpolate.interp1d(currTrack.T,currTrack.ZobjWheel, kind = 'linear')
             
             
             
             
             T_start = TimeArray[0]
             startIndex = 0
-            counter = 0
+            
             while (T_start < np.max(TimeArray)-self.maxDelay):
                 
                 T_subTrack = T_start + self.delaysCommon
@@ -366,14 +444,23 @@ class msdanalyzer:
                 Y_subTrack = func_Y(T_subTrack)
                 Z_subTrack = func_Z(T_subTrack)
                 
-                startIndex += next((i for i,x in enumerate(TimeArray[startIndex:] - TimeArray[startIndex]) if x >= self.timeWindow), None)
+                SqDisp_X_subTrack = squaredDisp(X_subTrack)
+                SqDisp_Y_subTrack = squaredDisp(Y_subTrack)
+                SqDisp_Z_subTrack = squaredDisp(Z_subTrack)
+                
+                SquaredDisp_X.append(SqDisp_X_subTrack)
+                SquaredDisp_Y.append(SqDisp_Y_subTrack)
+                SquaredDisp_Z.append(SqDisp_Z_subTrack)
 
+                # Save the Squared displacements for each trajectory
+                if(save is True):
+                    print('Saving trajectory {}'.format(counter))
+                    np.savez_compressed(os.path.join(self.savePath,self.Organism + '_'+self.Condition + '_' + "trajectories"+'{:04d}'.format(counter)), trajectories_x = SqDisp_X_subTrack, trajectories_y = SqDisp_Y_subTrack, trajectories_z = SqDisp_Z_subTrack, time = T_subTrack)
+
+
+                startIndex += next((i for i,x in enumerate(TimeArray[startIndex:] - TimeArray[startIndex]) if x >= self.timeWindow), None)
                 
                 T_start = TimeArray[startIndex]
-                
-                SquaredDisp_X.append(squaredDisp(X_subTrack))
-                SquaredDisp_Y.append(squaredDisp(Y_subTrack))
-                SquaredDisp_Z.append(squaredDisp(Z_subTrack))
                 
                 counter += 1
                 
@@ -382,18 +469,22 @@ class msdanalyzer:
         return SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z
     
     
-    def computeMSD(self):
+    def computeMSD(self, save = False):
         
-        SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z = self.computeSqDisp()
+        if(self.ensemble_method == 'subtrack'):
+            SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z = self.computeSqDisp(save = True)
+        else:
+            SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z = self.computeSqDisp_minTrack()
+
         
-        
+        # Find the no:of subtracks. This should be the same as number of tracks if we use the mintrack ensemble method.
         nSubTracks = len(SquaredDisp_X)
         
         print('Total number of subtracks : {}'.format(nSubTracks))
         
-        MSD_matrix_X = np.zeros((nSubTracks,self.tLen))
-        MSD_matrix_Y = np.zeros((nSubTracks,self.tLen))
-        MSD_matrix_Z = np.zeros((nSubTracks,self.tLen))
+        SD_matrix_X = np.zeros((nSubTracks,self.tLen))
+        SD_matrix_Y = np.zeros((nSubTracks,self.tLen))
+        SD_matrix_Z = np.zeros((nSubTracks,self.tLen))
         
 #        print(np.shape(MSD_matrix_X))
         
@@ -401,9 +492,9 @@ class msdanalyzer:
         for ii in range(nSubTracks):
             
 #            print(np.shape(SquaredDisp_X[ii]))
-            MSD_matrix_X[ii,:len(SquaredDisp_X[ii])] =  SquaredDisp_X[ii]
-            MSD_matrix_Y[ii,:len(SquaredDisp_Y[ii])] =  SquaredDisp_Y[ii]
-            MSD_matrix_Z[ii,:len(SquaredDisp_Z[ii])] =  SquaredDisp_Z[ii]
+            SD_matrix_X[ii,:len(SquaredDisp_X[ii])] =  SquaredDisp_X[ii]
+            SD_matrix_Y[ii,:len(SquaredDisp_Y[ii])] =  SquaredDisp_Y[ii]
+            SD_matrix_Z[ii,:len(SquaredDisp_Z[ii])] =  SquaredDisp_Z[ii]
             
 #        subTracks = np.array(range(nSubTracks))
         
@@ -416,39 +507,159 @@ class msdanalyzer:
 #        plt.axis('image')
 #        plt.show()
             
-        Weights = np.sum(MSD_matrix_X!=0, axis = 0)
+#         Weights = np.sum(SD_matrix_X!=0, axis = 0)
+#         Weights[0] = nSubTracks
+
+#         np.shape(Weights)
+        
+#         plt.figure()
+#         plt.plot(self.delaysCommon, Weights, color = 'r')
+#         plt.show()
+# #        
+# #        print(np.shape(Weights))
+# #        print(np.shape(MSD_matrix_X))
+        
+        # SD_matrix_X[SD_matrix_X==0] = np.nan
+        # SD_matrix_Y[SD_matrix_Y==0] = np.nan
+        # SD_matrix_Z[SD_matrix_Z==0] = np.nan
         
         
-#        plt.figure(4)
-#        plt.plot(self.delaysCommon, Weights, color = 'r')
-#        plt.show()
-#        
-#        print(np.shape(Weights))
-#        print(np.shape(MSD_matrix_X))
-        
-        MSD_matrix_X[MSD_matrix_X==0] = np.nan
-        MSD_matrix_Y[MSD_matrix_Y==0] = np.nan
-        MSD_matrix_Z[MSD_matrix_Z==0] = np.nan
         
         
         
         
+        self.MSD_X = np.nanmean(SD_matrix_X,axis = 0)
+        self.MSD_Y = np.nanmean(SD_matrix_Y,axis = 0)
+        self.MSD_Z = np.nanmean(SD_matrix_Z,axis = 0)
         
+        self.MSD_XY = np.nanmean(SD_matrix_X + SD_matrix_Y, axis = 0)
+
+        self.MSD_3D = np.nanmean(SD_matrix_X + SD_matrix_Y + SD_matrix_Z, axis = 0)
         
-        self.MSD_X = np.nanmean(MSD_matrix_X,axis = 0)
-        self.MSD_Y = np.nanmean(MSD_matrix_Y,axis = 0)
-        self.MSD_Z = np.nanmean(MSD_matrix_Z,axis = 0)
+        self.stdev_X = np.nanstd(SD_matrix_X,axis = 0)
+        self.stdev_Y = np.nanstd(SD_matrix_Y,axis = 0)
+        self.stdev_Z = np.nanstd(SD_matrix_Z,axis = 0)
         
-        self.MSD_XY = np.nanmean(MSD_matrix_X + MSD_matrix_Y, axis = 0)
-        
-        self.stdev_X = np.nanstd(MSD_matrix_X,axis = 0)
-        self.stdev_Y = np.nanstd(MSD_matrix_Y,axis = 0)
-        self.stdev_Z = np.nanstd(MSD_matrix_Z,axis = 0)
-        
-        self.stdev_XY = np.nanstd(MSD_matrix_X + MSD_matrix_Y, axis = 0)
-        
-        
+        self.stdev_XY = np.nanstd(SD_matrix_X + SD_matrix_Y, axis = 0)
+
+        self.stdev_3D = np.nanstd(SD_matrix_X + SD_matrix_Y + SD_matrix_Z, axis = 0)
+
+
+        if(save is True):
+            dataLen = len(MSD_X)
+
+
+            # Save the results of the MSD analysis as numpy arrays/ pandas dataframes ...
+            dataFrame = pd.DataFrame({'Organism':[],'OrgSize':[],'Condition':[],'Time':[],'MSD_X':[],'MSD_Y':[], 'MSD_Z':[], 'stdev_X':[], 'stdev_Y':[], 'stdev_Z':[]})
             
+
+            dataFrame = dataFrame.append(pd.DataFrame{'Organism':np.repeat(self.Organism,dataLen,axis = 0),'OrgSize':np.repeat(self.OrgDim,dataLen,axis = 0),'Condition':np.repeat(self.Condition,dataLen,axis = 0),'Time':self.delaysCommon,'MSD_X':self.MSD_X,'MSD_Y':self.MSD_Y, 'MSD_Z':self.MSD_Z, 'stdev_X': self.stdev_X, 'stdev_Y':self.stdev_Y, 'stdev_Z':self.stdev_Z})
+            
+            saveFile = self.Organism+'_'+self.Condition+'_MSD.csv'
+
+            dataFrame.to_csv(os.path.join(self.savePath, saveFile))
+            
+    def computeLocalSlope(self, TimeArray, Track):
+
+        TimeArray = np.array(TimeArray)
+        Track = np.array(Track)
+
+        # Time window over which data is used for extracting the slope
+        window_size = int(self.maxDelay/10)
+        print('Window size {}(s)'.format(window_size))
+
+        # Time resolution of the extracted slope curve
+        step_size = 1
+
+        T_start = TimeArray[1]
+        startIndex = 0
+        counter = 0
+
+        Slope_Array = []
+        Delays_Array = []
+
+        while (T_start < np.max(TimeArray)-window_size):
+                
+            mask1 = TimeArray>=T_start 
+            mask2 = TimeArray<= T_start + window_size
+            T_subTrack = TimeArray[mask1 & mask2]
+
+            subTrack = Track[mask1 & mask2]
+
+            # Convert to log-scale to extract the slope
+            T_log = np.log(T_subTrack)
+            subTrack_log = np.log(subTrack)
+
+            # plt.figure()
+            # plt.plot(T_log, subTrack_log, 'ro')
+            # plt.show()
+
+            # Perform a linear fit and record the slope
+            p = np.polyfit(T_log, subTrack_log, deg = 1)
+
+            Slope_Array.append(p[0])
+            Delays_Array.append(T_start)
+
+            T_start += step_size
+
+
+        Slope_Array = np.array(Slope_Array)
+        Delays_Array = np.array(Delays_Array)
+
+        return Delays_Array, Slope_Array
+
+
+    def load_trajectories(self):
+        # Load trajectories from a folder and calculate MSD, and also perform fitting to extract parameters
+        
+        TimeArray = []
+        Traj_X = []
+        Traj_Z = []
+
+        counter = 0
+        for file in os.listdir(self.savePath):
+
+            if file.endswith(".npz"):
+                
+                data = np.load(os.path.join(self.savePath, file))
+                Time = data['time'] - data['time'][0]
+
+                # Save the time the first time around
+                if(counter==0):
+                    TimeArray.append(Time)
+
+                Traj_X[counter].append(data['trajectory_x'])
+                Traj_Z[counter].append(data['trajectory_z'])
+
+                counter += 1
+
+
+       
+
+        return TimeArray, Traj_X, Traj_Z
+
+
+    def compute_WLS(self):
+
+        Time, Traj_X, Traj_Z = self.load_trajectories()
+
+        # Max time over which to calculate the fit for the X-axis trajectory
+        T_max_X = 10
+
+        Tmax_index = next((i for i,x in enumerate(Time) if x >= T_max_X), None)
+
+        Time_X = Time[:Tmax_index]
+        Traj_X = Traj_X[Tmax_index]
+
+
+        M_x, N_x = np.shape(Traj_X)
+
+
+        M_z, N_z = np.shape(Traj_X)
+
+
+
+
             
         
                 

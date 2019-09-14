@@ -62,6 +62,7 @@ def getColorThreshold(imageName, filterName = 'HSV'):
         key = cv2.waitKey(100) & 0xFF
         # if the 'q' key is pressed, stop the loop
         if key == ord("q"):
+            cv2.destroyAllWindows()
             break
 
         thresh = cv2.inRange(frame_to_thresh, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))

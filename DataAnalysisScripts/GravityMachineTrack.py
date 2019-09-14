@@ -49,6 +49,9 @@ class gravMachineTrack:
         self.emptyTrack = None
         # Local Time when the track was measured
         self.localTime = localTime
+
+        # Total duration of track in seconds
+        self.trackDuration = None
         
         # Description of track (such as observed cell/organism state). Warning: This may be subjective. Mainly as a book-keeping utility
         self.track_desc = trackDescription
@@ -74,6 +77,7 @@ class gravMachineTrack:
         
         if(self.emptyTrack is False):
             self.imgFormat = '.svg'
+            # Contains the root-folder containing the folder tracks
             self.root, *rest = os.path.split(self.path)
             
             # Read the CSV file as a pandas dataframe
@@ -145,6 +149,9 @@ class gravMachineTrack:
             
             df_index = self.df.index.values
             
+            self.trackDuration = np.max(self.df['Time']) - np.min(self.df['Time'])
+
+            print('Track duration : {}'.format(self.trackDuration))
             
             df_index = df_index - df_index[0]
         
@@ -198,6 +205,7 @@ class gravMachineTrack:
                     
             self.scaleFactor = scaleFactor
             if(findDims):
+                self.setColorThresholds()
                 self.findOrgDims(circle=1)
             else:
                 self.OrgDim = orgDim
@@ -216,10 +224,10 @@ class gravMachineTrack:
         
     def openFile(self, fileName = None):
         
-        print('Opening dataset ...')
+        # print('Opening dataset ...')
         
         if(fileName is None):
-            print('No file supplied, initialzing an empty track')
+            # print('No file supplied, initializing an empty track')
             self.emptyTrack = True
         
             # fileName =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("CSV files","*.csv"),("all files","*.*")))
@@ -329,6 +337,7 @@ class gravMachineTrack:
         OrgMinDim = []
         OrgDim = []
         overwrite = False
+        print(self.path)
         if(not os.path.exists(os.path.join(self.path,saveFile)) or overwrite):
             
             
@@ -339,7 +348,7 @@ class gravMachineTrack:
                 image = cv2.imread(os.path.join(self.path,self.image_dict[file],file))
                 
                 
-                orgContour = ImageProcessing.colorThreshold(image = image)
+                orgContour = ImageProcessing.colorThreshold(image = image, threshLow = self.threshLow, threshHigh = self.threshHigh)
                 
                 if(orgContour is not None):
                 
@@ -387,6 +396,9 @@ class gravMachineTrack:
                 pickle.dump((OrgDim_mean, OrgMajDim_mean, OrgMinDim_mean), f)
                 
         else:
+            # Load the Organism Size data
+            print('Loading organism size from memory ...')
+            print(os.path.join(self.path,saveFile))
             with open(os.path.join(self.path,saveFile), 'rb') as f:
                 OrgDim_mean, OrgMajDim_mean, OrgMinDim_mean = pickle.load(f)
         
@@ -725,7 +737,7 @@ class gravMachineTrack:
         
         print('Image Width: {} px \n Image Height: {} px'.format(self.imW, self.imH))
         
-        if(not os.path.exists(os.path.join(self.path, saveFile))):
+        if(not os.path.exists(os.path.join(self.root, saveFile))):
             
             print(os.path.join(self.path, self.image_dict[imageName],imageName))
             v1_min,v2_min,v3_min,v1_max,v2_max,v3_max = rangeslider_functions.getColorThreshold(os.path.join(self.path,self.image_dict[imageName],imageName))
@@ -736,7 +748,7 @@ class gravMachineTrack:
                 pickle.dump((threshLow, threshHigh), f)
         else:
             print('Color thresholds available! \n Loading file {} ...'.format(os.path.join(self.root,saveFile)))
-            with open(os.path.join(self.path,saveFile), 'rb') as f:
+            with open(os.path.join(self.root,saveFile), 'rb') as f:
                 threshLow, threshHigh = pickle.load(f)
                 
         self.threshLow = threshLow
