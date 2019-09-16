@@ -336,12 +336,14 @@ class gravMachineTrack:
         OrgMajDim = []
         OrgMinDim = []
         OrgDim = []
+        OrgCenter = []
+
         overwrite = False
         print(self.path)
         if(not os.path.exists(os.path.join(self.path,saveFile)) or overwrite):
             
             
-            fileList = self.df['Image name'][self.imageIndex[0:10]]
+            fileList = self.df['Image name'][self.imageIndex[10]]
             # Calculate based on 100 images
             for file in fileList:
                 
@@ -364,6 +366,7 @@ class gravMachineTrack:
                         
                         OrgMajDim.append(self.mmPerPixel*2*Radius)
                         OrgMinDim.append(self.mmPerPixel*2*Radius)
+                        OrgCenter.append(center)
                         
                         OrgDim.append(self.mmPerPixel*(2*Radius))
                     else:
@@ -721,6 +724,7 @@ class gravMachineTrack:
                 
                 
     def setColorThresholds(self):
+        # Displays an image and allows the user to choose the threshold values so the object of interest is selected
         
         saveFile = 'colorThresholds.pkl'
 
@@ -738,15 +742,18 @@ class gravMachineTrack:
         print('Image Width: {} px \n Image Height: {} px'.format(self.imW, self.imH))
         
         if(not os.path.exists(os.path.join(self.root, saveFile))):
+            # If a color threshold does not exist on file then display an image and allow the user to choose the thresholds
             
             print(os.path.join(self.path, self.image_dict[imageName],imageName))
             v1_min,v2_min,v3_min,v1_max,v2_max,v3_max = rangeslider_functions.getColorThreshold(os.path.join(self.path,self.image_dict[imageName],imageName))
             threshLow = (v1_min,v2_min,v3_min)
             threshHigh = (v1_max,v2_max,v3_max)
             
+            # Save this threshold to file
             with open(os.path.join(self.path,saveFile), 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump((threshLow, threshHigh), f)
         else:
+            # If available just load the threshold
             print('Color thresholds available! \n Loading file {} ...'.format(os.path.join(self.root,saveFile)))
             with open(os.path.join(self.root,saveFile), 'rb') as f:
                 threshLow, threshHigh = pickle.load(f)

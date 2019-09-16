@@ -24,16 +24,20 @@ def squaredDisp(data):
 
 class msdanalyzer:
     
-    def __init__(self, Tracks = None, nDims = 3, ensemble_method = 'subtrack', testFlag = False, v = None, tau = None, Organism = None, Condition = None, OrgDim = None, savePath = None):
+    def __init__(self, Tracks = None, nDims = 3, ensemble_method = 'subtrack', testFlag = False, v = None, tau = None, Organism = None, Condition = None, savePath = None):
         # Tracks is a list of gravity machine tracks
         self.precision = 12
         self.nDims = 3
         self.testFlag = testFlag
         self.Organism = Organism
         self.Condition = Condition
-        self.OrgDim = OrgDim
 
         self.savePath = savePath
+
+        # Path in which to save the resulting MSD trajectories
+
+        self.saveFile = self.Organism+'_'+self.Condition
+
 
         # Create sub-folder for each condition
         self.subFolder = self.Organism + '_' + self.Condition
@@ -70,6 +74,21 @@ class msdanalyzer:
                 self.getMinTrackDuration()
 
             self.getCommonDelays()
+
+    def get_Mean_Std(self, attr):
+        # Calculate mean and std of attribute over a group of tracks
+
+        Array = []
+
+        for ii in range(self.nTracks):
+
+            currTrack = self.Tracks[ii]
+
+            Array.append(getattr(currTrack, attr))
+
+        return np.nanmean(Array), np.nanstd(Array)
+
+
        
         
     def genTestTraj(self):
@@ -107,7 +126,7 @@ class msdanalyzer:
         
         self.Tracks = Tracks
         
-        self.delaysCommon = np.linspace(0,self.maxDelay,self.tLen)
+        self.delays = np.linspace(0,self.maxDelay,self.tLen)
 #        print(Tracks[0].T)
             
         
@@ -237,7 +256,7 @@ class msdanalyzer:
 
         self.Tracks = Tracks
         
-        self.delaysCommon = np.linspace(0,self.maxDelay,self.tLen)
+        self.delays = np.linspace(0,self.maxDelay,self.tLen)
 
 
     def getMinTrackDuration(self):
@@ -287,9 +306,9 @@ class msdanalyzer:
         # This generates a common time array so many different tracks with different sampling rates can be avearaged
         
         self.tLen = int(self.maxDelay/float(self.minDiff))
-        self.delaysCommon = np.linspace(0,self.maxDelay,self.tLen)
-        self.delayIndex = np.array(range(0,len(self.delaysCommon)))
-        print(self.delaysCommon)
+        self.delays = np.linspace(0,self.maxDelay,self.tLen)
+        self.delayIndex = np.array(range(0,len(self.delays)))
+        print(self.delays)
         
     def DispAtCommonTimes(self):
         
@@ -389,9 +408,9 @@ class msdanalyzer:
             func_Z = interpolate.interp1d(currTrack.T,currTrack.ZobjWheel, kind = 'linear')
 
 
-            X_subTrack = func_X(self.delaysCommon)
-            Y_subTrack = func_Y(self.delaysCommon)
-            Z_subTrack = func_Z(self.delaysCommon)
+            X_subTrack = func_X(self.delays)
+            Y_subTrack = func_Y(self.delays)
+            Z_subTrack = func_Z(self.delays)
                 
             # if(save_trajectories==True):
             #     # Save the trajectories
@@ -437,7 +456,7 @@ class msdanalyzer:
             
             while (T_start < np.max(TimeArray)-self.maxDelay):
                 
-                T_subTrack = T_start + self.delaysCommon
+                T_subTrack = T_start + self.delays
                 
                 
                 X_subTrack = func_X(T_subTrack)
@@ -469,95 +488,103 @@ class msdanalyzer:
         return SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z
     
     
-    def computeMSD(self, save = False):
+    def computeMSD(self, save = False, overwrite = False):
         
-        if(self.ensemble_method == 'subtrack'):
-            SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z = self.computeSqDisp(save = True)
+        saveFile = self.saveFile + '_MSD.csv'
+        if(not os.path.exists(os.path.join(self.savePath, saveFile)) or overwrite):
+
+            if(self.ensemble_method == 'subtrack'):
+                SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z = self.computeSqDisp(save = True)
+            else:
+                SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z = self.computeSqDisp_minTrack()
+
+            
+            # Find the no:of subtracks. This should be the same as number of tracks if we use the mintrack ensemble method.
+            nSubTracks = len(SquaredDisp_X)
+            
+            print('Total number of subtracks : {}'.format(nSubTracks))
+            
+            SD_matrix_X = np.zeros((nSubTracks,self.tLen))
+            SD_matrix_Y = np.zeros((nSubTracks,self.tLen))
+            SD_matrix_Z = np.zeros((nSubTracks,self.tLen))
+            
+    #        print(np.shape(MSD_matrix_X))
+            
+           
+            for ii in range(nSubTracks):
+                
+    #            print(np.shape(SquaredDisp_X[ii]))
+                SD_matrix_X[ii,:len(SquaredDisp_X[ii])] =  SquaredDisp_X[ii]
+                SD_matrix_Y[ii,:len(SquaredDisp_Y[ii])] =  SquaredDisp_Y[ii]
+                SD_matrix_Z[ii,:len(SquaredDisp_Z[ii])] =  SquaredDisp_Z[ii]
+                
+    #        subTracks = np.array(range(nSubTracks))
+            
+    #        print(len(subTracks))
+    #        print(len(self.delays))
+    #        print(np.shape(MSD_matrix_X))
+    #        plt.figure(4)
+    #        ax = plt.contourf(self.delays,subTracks,MSD_matrix_X==0)
+    #        plt.colorbar(ax)
+    #        plt.axis('image')
+    #        plt.show()
+                
+    #         Weights = np.sum(SD_matrix_X!=0, axis = 0)
+    #         Weights[0] = nSubTracks
+
+    #         np.shape(Weights)
+            
+    #         plt.figure()
+    #         plt.plot(self.delays, Weights, color = 'r')
+    #         plt.show()
+    # #        
+    # #        print(np.shape(Weights))
+    # #        print(np.shape(MSD_matrix_X))
+            
+            # SD_matrix_X[SD_matrix_X==0] = np.nan
+            # SD_matrix_Y[SD_matrix_Y==0] = np.nan
+            # SD_matrix_Z[SD_matrix_Z==0] = np.nan
+            
+            
+            
+            
+            
+            
+            self.MSD_X = np.nanmean(SD_matrix_X,axis = 0)
+            self.MSD_Y = np.nanmean(SD_matrix_Y,axis = 0)
+            self.MSD_Z = np.nanmean(SD_matrix_Z,axis = 0)
+            
+            self.MSD_XY = np.nanmean(SD_matrix_X + SD_matrix_Y, axis = 0)
+
+            self.MSD_3D = np.nanmean(SD_matrix_X + SD_matrix_Y + SD_matrix_Z, axis = 0)
+            
+            self.stdev_X = np.nanstd(SD_matrix_X,axis = 0)
+            self.stdev_Y = np.nanstd(SD_matrix_Y,axis = 0)
+            self.stdev_Z = np.nanstd(SD_matrix_Z,axis = 0)
+            
+            self.stdev_XY = np.nanstd(SD_matrix_X + SD_matrix_Y, axis = 0)
+
+            self.stdev_3D = np.nanstd(SD_matrix_X + SD_matrix_Y + SD_matrix_Z, axis = 0)
+
+
+            if(save is True):
+                dataLen = len(self.MSD_X)
+
+                OrgDim_mean, OrgDim_std = self.get_Mean_Std('OrgDim')
+
+                print('Mean and Std of Organism size : {} +- {}(um)'.format(OrgDim_mean, OrgDim_std))
+
+                # Save the results of the MSD analysis as numpy arrays/ pandas dataframes ...
+                dataFrame = pd.DataFrame({'Organism':[],'OrgSize mean':[],'OrgSize std':[],'Condition':[],'delays':[],'MSD_X':[],'MSD_Y':[], 'MSD_Z':[], 'stdev_X':[], 'stdev_Y':[], 'stdev_Z':[]})
+
+                dataFrame = dataFrame.append(pd.DataFrame({'Organism':np.repeat(self.Organism,dataLen,axis = 0),'OrgSize mean':np.repeat(OrgDim_mean,dataLen,axis = 0), 'OrgSize std':np.repeat(OrgDim_std,dataLen,axis = 0), 'Condition':np.repeat(self.Condition,dataLen,axis = 0),'delays':self.delays,'MSD_X':self.MSD_X,'MSD_Y':self.MSD_Y, 'MSD_Z':self.MSD_Z, 'stdev_X': self.stdev_X, 'stdev_Y':self.stdev_Y, 'stdev_Z':self.stdev_Z}))
+                
+                dataFrame.to_csv(os.path.join(self.savePath, saveFile))
+
         else:
-            SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z = self.computeSqDisp_minTrack()
+            print('Loading MSD trajectory from file')
+            self.load_MSD(fileName = saveFile)
 
-        
-        # Find the no:of subtracks. This should be the same as number of tracks if we use the mintrack ensemble method.
-        nSubTracks = len(SquaredDisp_X)
-        
-        print('Total number of subtracks : {}'.format(nSubTracks))
-        
-        SD_matrix_X = np.zeros((nSubTracks,self.tLen))
-        SD_matrix_Y = np.zeros((nSubTracks,self.tLen))
-        SD_matrix_Z = np.zeros((nSubTracks,self.tLen))
-        
-#        print(np.shape(MSD_matrix_X))
-        
-       
-        for ii in range(nSubTracks):
-            
-#            print(np.shape(SquaredDisp_X[ii]))
-            SD_matrix_X[ii,:len(SquaredDisp_X[ii])] =  SquaredDisp_X[ii]
-            SD_matrix_Y[ii,:len(SquaredDisp_Y[ii])] =  SquaredDisp_Y[ii]
-            SD_matrix_Z[ii,:len(SquaredDisp_Z[ii])] =  SquaredDisp_Z[ii]
-            
-#        subTracks = np.array(range(nSubTracks))
-        
-#        print(len(subTracks))
-#        print(len(self.delaysCommon))
-#        print(np.shape(MSD_matrix_X))
-#        plt.figure(4)
-#        ax = plt.contourf(self.delaysCommon,subTracks,MSD_matrix_X==0)
-#        plt.colorbar(ax)
-#        plt.axis('image')
-#        plt.show()
-            
-#         Weights = np.sum(SD_matrix_X!=0, axis = 0)
-#         Weights[0] = nSubTracks
-
-#         np.shape(Weights)
-        
-#         plt.figure()
-#         plt.plot(self.delaysCommon, Weights, color = 'r')
-#         plt.show()
-# #        
-# #        print(np.shape(Weights))
-# #        print(np.shape(MSD_matrix_X))
-        
-        # SD_matrix_X[SD_matrix_X==0] = np.nan
-        # SD_matrix_Y[SD_matrix_Y==0] = np.nan
-        # SD_matrix_Z[SD_matrix_Z==0] = np.nan
-        
-        
-        
-        
-        
-        
-        self.MSD_X = np.nanmean(SD_matrix_X,axis = 0)
-        self.MSD_Y = np.nanmean(SD_matrix_Y,axis = 0)
-        self.MSD_Z = np.nanmean(SD_matrix_Z,axis = 0)
-        
-        self.MSD_XY = np.nanmean(SD_matrix_X + SD_matrix_Y, axis = 0)
-
-        self.MSD_3D = np.nanmean(SD_matrix_X + SD_matrix_Y + SD_matrix_Z, axis = 0)
-        
-        self.stdev_X = np.nanstd(SD_matrix_X,axis = 0)
-        self.stdev_Y = np.nanstd(SD_matrix_Y,axis = 0)
-        self.stdev_Z = np.nanstd(SD_matrix_Z,axis = 0)
-        
-        self.stdev_XY = np.nanstd(SD_matrix_X + SD_matrix_Y, axis = 0)
-
-        self.stdev_3D = np.nanstd(SD_matrix_X + SD_matrix_Y + SD_matrix_Z, axis = 0)
-
-
-        if(save is True):
-            dataLen = len(MSD_X)
-
-
-            # Save the results of the MSD analysis as numpy arrays/ pandas dataframes ...
-            dataFrame = pd.DataFrame({'Organism':[],'OrgSize':[],'Condition':[],'Time':[],'MSD_X':[],'MSD_Y':[], 'MSD_Z':[], 'stdev_X':[], 'stdev_Y':[], 'stdev_Z':[]})
-            
-
-            dataFrame = dataFrame.append(pd.DataFrame{'Organism':np.repeat(self.Organism,dataLen,axis = 0),'OrgSize':np.repeat(self.OrgDim,dataLen,axis = 0),'Condition':np.repeat(self.Condition,dataLen,axis = 0),'Time':self.delaysCommon,'MSD_X':self.MSD_X,'MSD_Y':self.MSD_Y, 'MSD_Z':self.MSD_Z, 'stdev_X': self.stdev_X, 'stdev_Y':self.stdev_Y, 'stdev_Z':self.stdev_Z})
-            
-            saveFile = self.Organism+'_'+self.Condition+'_MSD.csv'
-
-            dataFrame.to_csv(os.path.join(self.savePath, saveFile))
             
     def computeLocalSlope(self, TimeArray, Track):
 
@@ -658,6 +685,100 @@ class msdanalyzer:
         M_z, N_z = np.shape(Traj_X)
 
 
+    def load_MSD(self, fileName = None):
+
+        keys = ['delays', 'MSD_X','MSD_Y','MSD_Z','stdev_X','stdev_Y','stdev_Z']
+        
+        if(fileName is not None):
+
+            dataFrame = pd.read_csv(os.path.join(self.savePath, fileName))
+
+            for attr in keys:
+
+                setattr(self, attr, dataFrame[attr])
+                
+                
+#------------------------------------------------------------------------------
+# Functions for velocity distrtibution calculation 
+#------------------------------------------------------------------------------
+                
+    def calculate_velocityDist(self):
+        
+        saveFile = self.saveFile + '_VelocityDistribution.csv'
+
+
+        if(not os.path.exists(os.path.join(self.savePath, saveFile))):
+	  		Velocities_X = np.array([])
+	      	Velocities_Y = np.array([])
+	      	Velocities_Z = np.array([])
+
+	      	OrgDim_mean, OrgDim_std = self.get_Mean_Std('OrgDim')
+
+			dataFrame_full = pd.DataFrame({'Organism':[],'Condition':[],'OrgSize':[],'VelocityX':[],'VelocityY':[],'VelocityZ':[]})
+			
+			counter = 0
+			for ii in range(self.nTracks):
+
+
+				currTrack = self.Tracks[ii]
+
+				print('...Analyzing Track {} of Duration {} s'.format(ii, np.max(currTrack.T)))
+
+				AutoTracking = np.array(~currTrack.df['Manual Tracking'][:-1], dtype= 'bool')
+
+				Velocities_X = np.array(currTrack.Vx[AutoTracking])
+				Velocities_Y = np.array(currTrack.Vy[AutoTracking])
+				Velocities_Z = np.array(currTrack.Vz[AutoTracking])
+
+	            dataFrame_full = dataFrame_full.append(pd.DataFrame({'Organism':np.repeat(self.Organism,dataLen,axis = 0),'Condition':np.repeat(self.Condition,dataLen,axis=0), 'OrgSize': np.repeat(OrgDim_mean,dataLen,axis = 0), 'VelocityX':Velocities_X,'VelocityY':Velocities_Y,'VelocityZ':Velocities_Z}))
+
+
+
+	        dataFrame_full.to_csv(os.path.join(self.savePath, saveFile))
+
+	  
+
+
+
+    def plot_velocityDistribution(self, saveFile):
+
+    	saveFile = self.saveFile + '_VelocityDistribution.csv'
+
+
+        if(os.path.exists(os.path.join(self.savePath, saveFile))):
+
+        	dataFrame_full = pd.read_csv(os.apth.join(self.savePath, saveFile))
+
+
+			my_pal = {'VelocityZ_noWall': 'b' ,'VelocityX_noWall': 'r'}
+			color_list = sns.color_palette("RdBu_r", 7)
+			#my_pal = {'VelocityZ_noWall': color_list[0] ,'VelocityX_noWall': color_list[6]}
+
+			xlim1 = -2
+			xlim2 = 2
+			decimals = 1
+
+			plt.figure(figsize=(4.5,4))
+			ax0 = sns.distplot(dataFrame_full.loc[dataFrame_full["Organism"] == self.Organism,"VelocityZ"],  kde = True , color = 'b', norm_hist = True, hist_kws={"histtype": "bar","edgecolor":'w', "linewidth": 0.2, "alpha": 0.5, "label":'Vz'})
+			#ax0 = sns.distplot(dataFrame_full.loc[dataFrame_full["Organism"] == Organism2,"VelocityZ"],  kde = True , color = 'k', norm_hist = True, hist_kws={"histtype": "bar","edgecolor":'w', "linewidth": 0.2, "alpha": 0.5, "label":'Vz'})
+
+			ax1 = sns.distplot(dataFrame_full.loc[dataFrame_full["Organism"] == self.Organism,"VelocityX"],  kde = True , color = 'r', norm_hist = True, hist_kws={"histtype": "bar","edgecolor":'w', "linewidth": 0.2, "alpha": 0.5, "label":'Vx'})  
+
+			plt.xlim([xlim1, xlim2])
+			plt.xticks(np.round(np.linspace(xlim1,xlim2,5), decimals=decimals))
+			#plt.savefig(os.path.join(saveSubFolder,Organism+'VelocityDistribution_FINAL.svg'))
+			plt.show()
+
+			my_pal = {'VelocityZ': 'b' ,'VelocityX': 'r'}
+
+
+
+
+        
+
+
+
+
 
 
             
@@ -666,26 +787,26 @@ class msdanalyzer:
 #------------------------------------------------------------------------------
         # Plotting functions
 #------------------------------------------------------------------------------
-    def plotMSD(self, figname = 1, saveFolder = None, orgName = None, plot_analytical = False):
+    def plotMSD(self, fileName = None, figname = 1, saveFolder = None, orgName = None, plot_analytical = False):
         
-        
+
 #        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
         
         plt.figure(figsize = (8,6))
         ax1 = plt.gca()
-        PlotUtils.errorfill(self.delaysCommon, self.MSD_X, self.stdev_X, ax = ax1, color = 'r', label = 'Horizontal (X)')
+        PlotUtils.errorfill(self.delays, self.MSD_X, self.stdev_X, ax = ax1, color = 'r', label = 'Horizontal (X)')
 
         ax3 = plt.gca()
         
-        PlotUtils.errorfill(self.delaysCommon, self.MSD_Z, self.stdev_Z, ax = ax3, color = 'b', label = 'Vertical (Z)')
+        PlotUtils.errorfill(self.delays, self.MSD_Z, self.stdev_Z, ax = ax3, color = 'b', label = 'Vertical (Z)')
 #        
         if(plot_analytical==True and self.testFlag==True):
-            ax3.plot(self.delaysCommon, self.DiffCoeff*self.delaysCommon, color = 'k', marker = 'o')
+            ax3.plot(self.delays, self.DiffCoeff*self.delays, color = 'k', marker = 'o')
 
 
         ax3.set_xlabel('Time (s)')
         ax3.set_ylabel('MSD')
-        plt.xlim(0,np.max(self.delaysCommon))
+        plt.xlim(0,np.max(self.delays))
         plt.legend(loc='upper left')
         if(saveFolder is not None and orgName is not None):
             plt.savefig(os.path.join(saveFolder,orgName+'_MSD_Linear.svg'),bbox_inches='tight',dpi=150)
@@ -703,13 +824,13 @@ class msdanalyzer:
         
         plt.figure(figsize = (4,3))
         ax1 = plt.gca()
-        ax1.plot(self.delaysCommon, self.MSD_X, color = 'r', label = 'Horizontal (X)')
+        ax1.plot(self.delays, self.MSD_X, color = 'r', label = 'Horizontal (X)')
         ax1.set_yscale('log')
         ax1.set_xscale('log')
         
         ax3 = plt.gca()
         
-        ax3.plot(self.delaysCommon, self.MSD_Z, color = 'b', label = 'Vertical')#        ax3.set_yscale('log')
+        ax3.plot(self.delays, self.MSD_Z, color = 'b', label = 'Vertical')#        ax3.set_yscale('log')
         ax3.plot(time,X_linear,'k-')
         ax3.plot(time,X_quad, 'k--')
         ax3.set_yscale('log')
@@ -717,7 +838,7 @@ class msdanalyzer:
         ax3.set_xlabel('Time (s)')
         ax3.set_ylabel('MSD')
         
-        plt.xlim(0,np.max(self.delaysCommon))
+        plt.xlim(0,np.max(self.delays))
 #        plt.legend(loc='upper left')
         if(saveFolder is not None and orgName is not None):
 
