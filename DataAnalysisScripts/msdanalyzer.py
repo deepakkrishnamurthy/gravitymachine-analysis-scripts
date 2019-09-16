@@ -747,7 +747,7 @@ class msdanalyzer:
 
         if(os.path.exists(os.path.join(self.savePath, saveFile))):
 
-        	dataFrame_full = pd.read_csv(os.apth.join(self.savePath, saveFile))
+        	dataFrame_full = pd.read_csv(os.path.join(self.savePath, saveFile))
 
 
 			my_pal = {'VelocityZ_noWall': 'b' ,'VelocityX_noWall': 'r'}
