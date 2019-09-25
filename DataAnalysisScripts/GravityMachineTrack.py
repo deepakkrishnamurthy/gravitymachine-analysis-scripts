@@ -25,6 +25,8 @@ from scipy.ndimage.filters import uniform_filter1d
 import imageprocessing.imageprocessing_utils as ImageProcessing
 
 import PIVanalysis.PIV_Functions as PIV_Functions
+import keyboard
+import random
 
 def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label = None):
     ax = ax if ax is not None else plt.gca()
@@ -206,7 +208,7 @@ class gravMachineTrack:
             self.scaleFactor = scaleFactor
             if(findDims):
                 self.setColorThresholds()
-                self.findOrgDims(circle=1)
+                self.findOrgDims(circle=1, overwrite = True)
             else:
                 self.OrgDim = orgDim
             
@@ -235,7 +237,8 @@ class gravMachineTrack:
         else:
 
             # self.path contains the absolute path to the track file folder
-            self.path, self.trackFile = os.path.split(fileName)        
+            self.path, self.trackFile = os.path.split(fileName) 
+            self.trackFolder, *rest = os.path.split(self.path)       
     #        self.path = QtGui.QFileDialog.getExistingDirectory(None, "Open dataset folder")
             
             # File name for saving the analyzed data
@@ -329,91 +332,197 @@ class gravMachineTrack:
         self.imH, self.imW, *rest = np.shape(image_a)
                 
             
-    def findOrgDims(self, circle=0):
+    def findOrgDims(self, circle=0, overwrite = False):
         # Finds the maximum dimensions of the organism 
-        saveFile = 'orgDims.pkl'
-        
+        saveFile = 'orgDims.csv'
+
         OrgMajDim = []
         OrgMinDim = []
         OrgDim = []
-        OrgCenter = []
 
-        overwrite = False
+        size_df = pd.DataFrame({'Organism':[],'Condition':[],'Track':[],'OrgDim':[],'OrgMajDim':[],'OrgMinDim':[]})
+    
         print(self.path)
         if(not os.path.exists(os.path.join(self.path,saveFile)) or overwrite):
             
-            
-            fileList = self.df['Image name'][self.imageIndex[10]]
+            nImages = 100
+            nTotal = len(self.imageIndex)
+
+            print(nTotal)
+         
+
+            fileList = self.df['Image name'][self.imageIndex[:nImages]]
+            print(fileList)
+            print(type(fileList))
             # Calculate based on 100 images
-            for file in fileList:
-                
+
+            # Enter an event loop where the use can choose which image is used for calculating organism size
+            img_num = 0
+            roiFlag = False
+
+            while True:
+                file = fileList.iloc[img_num]
+                print(file)
                 image = cv2.imread(os.path.join(self.path,self.image_dict[file],file))
-                
-                
+
+                if(roiFlag is True):
+                    r = cv2.selectROI('Select ROI', image)
+                    image = image[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
+                    roiFlag = False
+                    cv2.destroyWindow('Select ROI')
+
+
                 orgContour = ImageProcessing.colorThreshold(image = image, threshLow = self.threshLow, threshHigh = self.threshHigh)
-                
+
                 if(orgContour is not None):
-                
+                    
                     if(circle):
                         (x_center,y_center), Radius = cv2.minEnclosingCircle(orgContour)
                         center = (int(x_center), int(y_center))
-                        plt.figure(1)
-                        plt.clf()
                         cv2.circle(image,center, int(Radius),(0,255,0),2)
-                        plt.imshow(image)
-                        plt.pause(0.001)
-                        plt.show(block=True)
-                        
-                        OrgMajDim.append(self.mmPerPixel*2*Radius)
-                        OrgMinDim.append(self.mmPerPixel*2*Radius)
-                        OrgCenter.append(center)
-                        
-                        OrgDim.append(self.mmPerPixel*(2*Radius))
+                        cv2.imshow('Press ESC to exit, SPACEBAR for next img, R for ROI',image)
+                        key = cv2.waitKey(0)
                     else:
-                        try:
-                            ellipse = cv2.fitEllipse(orgContour)
+                        ellipse = cv2.fitEllipse(orgContour)
+                        cv2.ellipse(image,box=ellipse,color=[0,1,0])
+                        cv2.imshow('Press ESC to exit, SPACEBAR for next img, R for ROI',image)
+                        key = cv2.waitKey(0)
+            #                 
+                    
+                    if(key == 27):
+                        # ESC. If the organism is detected correctly, then store the value and break from the loop
+                        if(circle):
+                            OrgMajDim.append(self.mmPerPixel*2*Radius)
+                            OrgMinDim.append(self.mmPerPixel*2*Radius)
+                            OrgDim.append(self.mmPerPixel*2*Radius)
+
+                        else:
                             OrgMajDim.append(self.mmPerPixel*ellipse[1][0])
                             OrgMinDim.append(self.mmPerPixel*ellipse[1][1])
                             OrgDim.append(self.mmPerPixel*(ellipse[1][1] + ellipse[1][0])/float(2))
-                            
-                            plt.figure(1)
-                            plt.clf()
-                            cv2.ellipse(image,box=ellipse,color=[0,1,0])
-                            plt.imshow(image)
-                            plt.pause(0.001)
-                            plt.show(block=True)
-                        except:
-                            OrgMajDim.append(np.nan)
-                            OrgMinDim.append(np.nan)
-                            OrgDim.append(np.nan)
-                            
-                else:
-                    continue
-                            
+
+                        cv2.destroyAllWindows()
+                        break
+                    elif(key == 32):
+                        # Spacebar: If Organism is not found in given frame then show the next frame
+                        img_num += 1
+                        if(img_num >= nImages):
+                            img_num = 0
+                        continue
+                    elif(key == ord('r')):
+                        # Press 'r'. If the object is present but is not the only bright object in the frame
+                        roiFlag = True
+                    elif(key == ord('c')):
+                        self.setColorThresholds(overwrite = True)
+
+
+
+            OrgDim_mean = np.nanmean(np.array(OrgDim))
+            OrgMajDim_mean = np.nanmean(np.array(OrgMajDim))
+            OrgMinDim_mean = np.nanmean(np.array(OrgMinDim))
+
+            self.OrgDim = OrgDim_mean
+            self.OrgMajDim = OrgMajDim_mean
+            self.OrgMinDim = OrgMinDim_mean
             
-            OrgDim_mean = np.nanmax(np.array(OrgDim))
-            OrgMajDim_mean = np.nanmax(np.array(OrgMajDim))
-            OrgMinDim_mean = np.nanmax(np.array(OrgMinDim))
-            
-            with open(os.path.join(self.path,saveFile), 'wb') as f:  # Python 3: open(..., 'wb')
-                pickle.dump((OrgDim_mean, OrgMajDim_mean, OrgMinDim_mean), f)
-                
+            # with open(os.path.join(self.path,saveFile), 'wb') as f:  # Python 3: open(..., 'wb')
+            #     pickle.dump((OrgDim_mean, OrgMajDim_mean, OrgMinDim_mean), f)
+            # Save the Organism dimensions to file
+
+            size_df = size_df.append(pd.DataFrame({'Organism':[self.Organism],'Condition':[self.Condition],'Track':[self.trackFolder],'OrgDim':[self.OrgDim],'OrgMajDim':[self.OrgMajDim],'OrgMinDim':[self.OrgMinDim]}))
+                        
+            size_df.to_csv(os.path.join(self.path, saveFile))
+
         else:
             # Load the Organism Size data
             print('Loading organism size from memory ...')
-            print(os.path.join(self.path,saveFile))
-            with open(os.path.join(self.path,saveFile), 'rb') as f:
-                OrgDim_mean, OrgMajDim_mean, OrgMinDim_mean = pickle.load(f)
+            
+            # with open(os.path.join(self.path,saveFile), 'rb') as f:
+            #     OrgDim_mean, OrgMajDim_mean, OrgMinDim_mean = pickle.load(f)
+            size_df = pd.read_csv(os.path.join(self.path,saveFile))
         
-        self.OrgDim = OrgDim_mean
-        self.OrgMajDim = OrgMajDim_mean
-        self.OrgMinDim = OrgMinDim_mean
-        
+            self.OrgDim = size_df['OrgDim']
+            self.OrgMajDim = size_df['OrgMajDim']
+            self.OrgMinDim = size_df['OrgMinDim']
+            
         print('*'*50)
         print('Organism dimension {} mm'.format(self.OrgDim))
         print('Organism Major dimension {} mm'.format(self.OrgMajDim))
         print('Organism Minor dimension {} mm'.format(self.OrgMinDim))
         print('*'*50)
+                        
+                        
+            #         else:
+            #             try:
+            #                 ellipse = cv2.fitEllipse(orgContour)
+            #                 OrgMajDim.append(self.mmPerPixel*ellipse[1][0])
+            #                 OrgMinDim.append(self.mmPerPixel*ellipse[1][1])
+            #                 OrgDim.append(self.mmPerPixel*(ellipse[1][1] + ellipse[1][0])/float(2))
+                            
+            #                 plt.figure()
+            #                 cv2.ellipse(image,box=ellipse,color=[0,1,0])
+            #                 plt.imshow(image)
+            #                 plt.pause(0.001)
+            #                 plt.show()
+            #             except:
+            #                 OrgMajDim.append(np.nan)
+            #                 OrgMinDim.append(np.nan)
+            #                 OrgDim.append(np.nan)
+
+
+
+
+
+
+            # for file in fileList:
+                
+            #     print(file)
+            #     image = cv2.imread(os.path.join(self.path,self.image_dict[file],file))
+                
+                
+            #     orgContour = ImageProcessing.colorThreshold(image = image, threshLow = self.threshLow, threshHigh = self.threshHigh)
+                
+            #     if(orgContour is not None):
+                
+            #         if(circle):
+            #             (x_center,y_center), Radius = cv2.minEnclosingCircle(orgContour)
+            #             center = (int(x_center), int(y_center))
+            #             plt.figure()
+                       
+            #             cv2.circle(image,center, int(Radius),(0,255,0),2)
+            #             plt.imshow(image)
+            #             plt.pause(0.001)
+            #             plt.show()
+                        
+            #             OrgMajDim.append(self.mmPerPixel*2*Radius)
+            #             OrgMinDim.append(self.mmPerPixel*2*Radius)
+            #             OrgCenter.append(center)
+                        
+            #             OrgDim.append(self.mmPerPixel*(2*Radius))
+            #         else:
+            #             try:
+            #                 ellipse = cv2.fitEllipse(orgContour)
+            #                 OrgMajDim.append(self.mmPerPixel*ellipse[1][0])
+            #                 OrgMinDim.append(self.mmPerPixel*ellipse[1][1])
+            #                 OrgDim.append(self.mmPerPixel*(ellipse[1][1] + ellipse[1][0])/float(2))
+                            
+            #                 plt.figure()
+            #                 cv2.ellipse(image,box=ellipse,color=[0,1,0])
+            #                 plt.imshow(image)
+            #                 plt.pause(0.001)
+            #                 plt.show()
+            #             except:
+            #                 OrgMajDim.append(np.nan)
+            #                 OrgMinDim.append(np.nan)
+            #                 OrgDim.append(np.nan)
+                            
+            #     else:
+            #         continue
+                            
+            
+         
+                
+       
 
     def interp_positions(self):
 
@@ -723,7 +832,7 @@ class gravMachineTrack:
                     self.imageIndex_array, self.u_avg_array, self.v_avg_array, self.u_std_array, self.v_std_array = pickle.load(f)
                 
                 
-    def setColorThresholds(self):
+    def setColorThresholds(self, overwrite = False):
         # Displays an image and allows the user to choose the threshold values so the object of interest is selected
         
         saveFile = 'colorThresholds.pkl'
@@ -741,7 +850,7 @@ class gravMachineTrack:
         
         print('Image Width: {} px \n Image Height: {} px'.format(self.imW, self.imH))
         
-        if(not os.path.exists(os.path.join(self.root, saveFile))):
+        if(not os.path.exists(os.path.join(self.root, saveFile)) or overwrite):
             # If a color threshold does not exist on file then display an image and allow the user to choose the thresholds
             
             print(os.path.join(self.path, self.image_dict[imageName],imageName))

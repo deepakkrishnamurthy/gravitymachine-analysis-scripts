@@ -16,6 +16,7 @@ import GravityMachineTrack
 import PlotFunctions.PlotUtils as PlotUtils
 imp.reload(GravityMachineTrack)
 from wlsice.python import wlsice as wlsice
+# imp.reload(wlsice)
 import seaborn as sns
 
 def squaredDisp(data):
@@ -31,8 +32,21 @@ class msdanalyzer:
 		self.testFlag = testFlag
 		self.Organism = Organism
 		self.Condition = Condition
+       
+        
+        
+        
+		self.rootFolder = savePath
 
-		self.savePath = savePath
+		self.figuresFolder = os.path.join(self.rootFolder, 'MSD_figures')
+
+		if(not os.path.exists(self.figuresFolder)):
+			os.makedirs(self.figuresFolder)
+
+		self.fittingFolder = os.path.join(self.rootFolder, 'TaylorFunctionFitting_Analysis')
+
+		if(not os.path.exists(self.fittingFolder)):
+			os.makedirs(self.fittingFolder)
 
 		# Path in which to save the resulting MSD trajectories
 
@@ -43,7 +57,8 @@ class msdanalyzer:
 		self.subFolder = self.Organism + '_' + self.Condition
 
 		# Path to the sub-folder which contains the trajectories
-		self.savePath = os.path.join(self.savePath, self.subFolder)
+		self.savePath = os.path.join(self.rootFolder, self.subFolder)
+
 
 		if(not os.path.exists(self.savePath)):
 			os.makedirs(self.savePath)
@@ -53,7 +68,7 @@ class msdanalyzer:
 		# subtrack OR mintrack
 		self.ensemble_method = ensemble_method
 
-		if(self.testFlag == 1 or Tracks is None):
+		if(self.testFlag == 1 and Tracks is None):
 			self.maxDelay = 50
 			self.timeWindow = 5
 			# Length of the delays window over which we calculate MSD
@@ -62,18 +77,23 @@ class msdanalyzer:
 			self.genRunTumbleTraj(v = v, tau = tau)
 			
 		else:
-			self.Tracks = Tracks
-			self.nTracks = len(Tracks)
-			 # Maximum delay over which we want to calculate correlations
-			self.maxDelay = 60
-			self.timeWindow = 5
-			self.getMinDiff()
+			if(Tracks is not None):
+				self.Tracks = Tracks
+				self.nTracks = len(Tracks)
+				 # Maximum delay over which we want to calculate correlations
+				self.maxDelay = 50
+				self.timeWindow = 5
+				self.getMinDiff()
 
-			if(ensemble_method == 'mintrack'):
-				# Calculate the min track duration
-				self.getMinTrackDuration()
+				if(ensemble_method == 'mintrack'):
+					# Calculate the min track duration
+					self.getMinTrackDuration()
 
-			self.getCommonDelays()
+
+				self.getTotalTrackDuration()
+				self.getCommonDelays()
+
+
 
 	def get_Mean_Std(self, attr):
 		# Calculate mean and std of attribute over a group of tracks
@@ -259,6 +279,19 @@ class msdanalyzer:
 		self.delays = np.linspace(0,self.maxDelay,self.tLen)
 
 
+	def getTotalTrackDuration(self):
+
+		self.totalTrackDuration = 0
+
+		for ii in range(self.nTracks):
+			currTrack = self.Tracks[ii]
+
+			self.totalTrackDuration += currTrack.trackDuration
+
+
+		print('Total track duration : {} s'.format(self.totalTrackDuration))
+
+
 	def getMinTrackDuration(self):
 
 		self.minTrackDuration = 1000000000
@@ -430,6 +463,9 @@ class msdanalyzer:
 	
 	def computeSqDisp(self, save = False):
 		
+		print('Computing squared displacements ...')
+
+		# if(not os.path.exists(self.savePath) or len(os.listdir(self.savePath))==0): 
 		
 		SquaredDisp_X = []
 		SquaredDisp_Y = []
@@ -486,12 +522,16 @@ class msdanalyzer:
 			print('no:of Subtracks from Track {}: {}'.format(ii, counter))
 		
 		return SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z
+
+
+
 	
 	
 	def computeMSD(self, save = False, overwrite = False):
 		
 		saveFile = self.saveFile + '_MSD.csv'
-		if(not os.path.exists(os.path.join(self.savePath, saveFile)) or overwrite):
+
+		if(not os.path.exists(os.path.join(self.rootFolder, saveFile)) or overwrite):
 
 			if(self.ensemble_method == 'subtrack'):
 				SquaredDisp_X, SquaredDisp_Y, SquaredDisp_Z = self.computeSqDisp(save = True)
@@ -575,15 +615,29 @@ class msdanalyzer:
 				print('Mean and Std of Organism size : {} +- {}(um)'.format(OrgDim_mean, OrgDim_std))
 
 				# Save the results of the MSD analysis as numpy arrays/ pandas dataframes ...
-				dataFrame = pd.DataFrame({'Organism':[],'OrgSize mean':[],'OrgSize std':[],'Condition':[],'delays':[],'MSD_X':[],'MSD_Y':[], 'MSD_Z':[], 'stdev_X':[], 'stdev_Y':[], 'stdev_Z':[]})
+				dataFrame = pd.DataFrame({'Organism':[], 'nTracks':[], 'Total duration':[], 'OrgSize mean':[],'OrgSize std':[],'Condition':[], 'delays':[],'MSD_X':[],'MSD_Y':[], 'MSD_Z':[], 'stdev_X':[], 'stdev_Y':[], 'stdev_Z':[]})
 
-				dataFrame = dataFrame.append(pd.DataFrame({'Organism':np.repeat(self.Organism,dataLen,axis = 0),'OrgSize mean':np.repeat(OrgDim_mean,dataLen,axis = 0), 'OrgSize std':np.repeat(OrgDim_std,dataLen,axis = 0), 'Condition':np.repeat(self.Condition,dataLen,axis = 0),'delays':self.delays,'MSD_X':self.MSD_X,'MSD_Y':self.MSD_Y, 'MSD_Z':self.MSD_Z, 'stdev_X': self.stdev_X, 'stdev_Y':self.stdev_Y, 'stdev_Z':self.stdev_Z}))
+				dataFrame = dataFrame.append(pd.DataFrame({'Organism':np.repeat(self.Organism,dataLen,axis = 0), 'nTracks':np.repeat(self.nTracks,dataLen,axis = 0), 'Total duration':np.repeat(self.totalTrackDuration,dataLen,axis = 0), 'OrgSize mean':np.repeat(OrgDim_mean,dataLen,axis = 0), 'OrgSize std':np.repeat(OrgDim_std,dataLen,axis = 0), 'Condition':np.repeat(self.Condition,dataLen,axis = 0),'delays':self.delays,'MSD_X':self.MSD_X,'MSD_Y':self.MSD_Y, 'MSD_Z':self.MSD_Z, 'stdev_X': self.stdev_X, 'stdev_Y':self.stdev_Y, 'stdev_Z':self.stdev_Z}))
 				
-				dataFrame.to_csv(os.path.join(self.savePath, saveFile))
+				dataFrame.to_csv(os.path.join(self.rootFolder, saveFile))
 
 		else:
-			print('Loading MSD trajectory from file')
-			self.load_MSD(fileName = saveFile)
+			print('Loading MSD trajectory from file ...')
+			self.load_MSD(fileName = saveFile )
+
+
+
+	def load_MSD(self, fileName = None):
+
+		keys = ['delays', 'MSD_X','MSD_Y','MSD_Z','stdev_X','stdev_Y','stdev_Z']
+		
+		if(fileName is not None):
+			print('Loading MSD data from {}'.format(os.path.join(self.rootFolder, fileName)))
+			dataFrame = pd.read_csv(os.path.join(self.rootFolder, fileName))
+
+			for attr in keys:
+
+				setattr(self, attr, dataFrame[attr])
 
 			
 	def computeLocalSlope(self, TimeArray, Track):
@@ -634,7 +688,84 @@ class msdanalyzer:
 		Delays_Array = np.array(Delays_Array)
 
 		return Delays_Array, Slope_Array
+	#--------------------------------------------------------------------------------------------------------
+	# Weighted-Least-Squares with Correlated Errors Fitting Functions
+	#--------------------------------------------------------------------------------------------------------
+	# Ballistic motion with velocity v
+	#--------------------------------------------------------------------------------------------------------
+	def f_ballistic(self, t, params):
 
+		assert(len(params) == 1)
+		v = params[0]
+
+		return v**2*t**2
+
+	def df_ballistic(self, t, params):
+		assert(len(params) == 1)
+		v = params[0]
+		
+		df = np.zeros((len(params), len(t)))
+
+		df[0,:] = 2*v*t**2
+
+		return df
+
+	def d2f_ballistic(self, t, params):
+		assert(len(params) == 1)
+		v = params[0]
+
+		d2f = np.zeros((len(params), len(params), len(t)))
+
+		d2f[0,0,:] = 2*t**2
+		
+		return d2f 
+	#--------------------------------------------------------------------------------------------------------
+	# Taylor function with velocity v and correlation time tau
+	#--------------------------------------------------------------------------------------------------------
+	def f(self, t, params):
+		""" Taylor function:
+		""" 
+		assert(len(params) == 2)
+
+		v = params[0]
+		tau = params[1]
+
+		return 2*v**2*tau*(t - tau*(1 - np.exp(-t/tau)))
+
+	def df(self, t, params):
+		""" Gradient of Taylor function with respect to parameters v, tau """
+
+		assert(len(params) == 2)
+		v = params[0]
+		tau = params[1]
+
+		df = np.zeros((len(params), len(t)))
+
+		# Gradient wrt v (param[0])
+		df[0] = 4*tau*(t+(-1+(np.e)**(-1*t*(tau)**(-1)))*tau)*v
+
+		df[1] = 2*(t+(-2*tau+(np.e)**(-1*t*(tau)**(-1))*(t+2*tau)))*(v)**(2)
+
+		return df
+
+	def d2f(self, t, params):
+
+		v = params[0]
+		tau = params[1]
+
+		d2f = np.zeros((len(params), len(params), len(t)))
+
+		d2f[0,0] = 4 * tau * ( t + ( -1 + ( np.e )**( -1 * t * ( tau )**( -1 ) ) )*tau )
+
+		d2f[0,1] = 4 * ( t + ( -2 * tau + ( np.e )**( -1 * t * ( tau )**( -1 ) ) * (t + 2 * tau ) ) ) * v
+
+		d2f[1,0] = 4 * ( t + ( -2 * tau + ( np.e )**( -1 * t * ( tau )**( -1 ) ) * ( t + 2 * tau ) ) ) * v
+
+		d2f[1,1] = 2 * ( -2 + ( np.e )**( -1 * t * ( tau )**( -1 ) ) * ( tau )**( -2 ) * ( ( t )**( 2 ) + ( 2 * t * tau + 2 * ( tau )**( 2 ) ) ) ) * ( v )**( 2 )
+
+		return d2f
+
+			
 
 	def load_trajectories(self):
 		# Load trajectories from a folder and calculate MSD, and also perform fitting to extract parameters
@@ -647,7 +778,9 @@ class msdanalyzer:
 		for file in os.listdir(self.savePath):
 
 			if file.endswith(".npz"):
-				
+				Traj_X.append([])
+				Traj_Z.append([])
+				print('Loading trajectory : {}'.format(file))
 				data = np.load(os.path.join(self.savePath, file))
 				Time = data['time'] - data['time'][0]
 
@@ -655,47 +788,176 @@ class msdanalyzer:
 				if(counter==0):
 					TimeArray.append(Time)
 
-				Traj_X[counter].append(data['trajectory_x'])
-				Traj_Z[counter].append(data['trajectory_z'])
+				Traj_X[counter].append(data['trajectories_x'])
+				Traj_Z[counter].append(data['trajectories_z'])
 
 				counter += 1
 
-
-	   
+		TimeArray = np.squeeze(np.array(TimeArray))
+		Traj_X = np.squeeze(np.array(np.stack(Traj_X, axis = 0)))
+		Traj_Z = np.squeeze(np.array(np.stack(Traj_Z, axis = 0)))
 
 		return TimeArray, Traj_X, Traj_Z
 
-
-	def compute_WLS(self):
-
-		Time, Traj_X, Traj_Z = self.load_trajectories()
-
+	def TruncateTrajectory(self, Time, Traj, Tmax):
 		# Max time over which to calculate the fit for the X-axis trajectory
-		T_max_X = 10
+		Time, Traj = np.array(Time), np.array(Traj)
 
-		Tmax_index = next((i for i,x in enumerate(Time) if x >= T_max_X), None)
+		print(Time)
 
-		Time_X = Time[:Tmax_index]
-		Traj_X = Traj_X[Tmax_index]
+		print(np.shape(Time))
+		print(np.shape(Traj))
+
+		Tmax_index = next((i for i,x in enumerate(Time) if x >= Tmax))
+
+		Tmax_index = Tmax_index
+
+		print(Tmax_index)
+
+		return Time[:Tmax_index], Traj[:, :Tmax_index]
+
+	def coff_det(self, y, f):
+		"""Coefficient of determination, to check goodness-of-fit, from mean
+		of data (MSD), and f(t, params).
+		https://en.wikipedia.org/wiki/Coefficient_of_determination
+		"""
+		N = len(y)
+
+		# note, by y_mean here we mean the average over N, not M!
+		y_mean = np.sum(y) / N
+
+		SS_tot = np.sum(np.square(np.subtract(y_mean, y)))
+		SS_reg = np.sum(np.square(np.subtract(y_mean, f)))
+		SS_res = np.sum(np.square(np.subtract(y,      f)))
+
+		coeff_det = (1- SS_res / SS_tot)
+
+		print("# Coefficient of determination:\t {}".format(coeff_det))
+
+		return coeff_det
 
 
-		M_x, N_x = np.shape(Traj_X)
+	def performWLSICEfit(self, Time, Traj, function = 'taylor'):
 
-
-		M_z, N_z = np.shape(Traj_X)
-
-
-	def load_MSD(self, fileName = None):
-
-		keys = ['delays', 'MSD_X','MSD_Y','MSD_Z','stdev_X','stdev_Y','stdev_Z']
 		
-		if(fileName is not None):
 
-			dataFrame = pd.read_csv(os.path.join(self.savePath, fileName))
 
-			for attr in keys:
+		M, N = np.shape(Traj)
 
-				setattr(self, attr, dataFrame[attr])
+		min_method = "nm"           # Use Nelder-Mead minimization method
+		
+		
+
+		print('Initiaizing WLS-ICE fitting with {}'.format(function))
+		# The analytical function to fit, its gradient, and hessian
+		if(function == 'taylor'):
+			guess=np.array([1.0,1.0])     # Starting point in parameter space
+			wlsice.init(self.f, self.df, self.d2f)
+
+		elif (function == 'ballistic'):
+			guess=np.array([1.0])     # Starting point in parameter space
+			wlsice.init(self.f_ballistic, self.df_ballistic, self.d2f_ballistic)
+
+
+		print('Performing the fit ...')
+
+		 # Perform the actual fit
+		params, sigma, chi2_min = wlsice.fit(Time, Traj, guess, min_method)
+
+		  # RESULT:
+		print("# trajectories M = {},\tsampling times N={}, t_0={}".format(M, N, Time[0]))
+		print("# Optimal param:\t {}".format(params))
+		print("# Sigma:\t {}".format(sigma))
+		print("# Chi-square value: \t {}".format(chi2_min))
+
+		# Also get goodness-of-fitt parametes
+		y_mean = wlsice.computeMean(Traj)
+
+		if(function == 'taylor'):
+			coeff_det = self.coff_det(y_mean, self.f(Time, params))
+		elif (function == 'ballistic'):
+			coeff_det = self.coff_det(y_mean, self.f_ballistic(Time, params))
+			
+		
+
+		return params, sigma, chi2_min, coeff_det
+
+
+	def fitTrajectories(self, overwrite = False):
+
+		saveFile = self.saveFile + '_TaylorFunctionFit.csv'
+
+		if(not os.path.exists(os.path.join(self.fittingFolder, saveFile)) or overwrite == True):
+
+			Time, Traj_X, Traj_Z = self.load_trajectories()
+
+			Time = Time[1:]
+			Traj_X, Traj_Z = Traj_X[:,1:], Traj_Z[:,1:]
+
+			shape = np.shape(Traj_X)
+			print(shape)
+			print(Traj_X)
+			assert(shape[1]>1)
+			# Truncate the X trajectory over a shorter time, since it typically decorrelates faster
+			print(len(Time))
+			Time_X, Traj_X = self.TruncateTrajectory(Time, Traj_X, 10)
+			# Time_X = Time
+			# shape = np.shape(Traj_X)
+			# print(shape)
+
+			self.params_X, self.sigma_X, self.chi2_min_X, self.coeff_det_X = self.performWLSICEfit(Time_X, Traj_X, function = 'taylor')
+
+			self.params_Z, self.sigma_Z, self.chi2_min_Z, self.coeff_det_Z = self.performWLSICEfit(Time, Traj_Z, function = 'ballistic')
+
+			print(self.params_X)
+			print(type(self.params_X))
+
+			self.v_X, self.tau_X = self.params_X[0], self.params_X[1]
+			
+			self.sigma_v_X, self.sigma_tau_X = self.sigma_X[0], self.sigma_X[1]
+
+			if(len(self.params_Z)==2):
+				self.v_Z, self.tau_Z = self.params_Z[0], self.params_Z[1]
+			
+				self.sigma_v_Z, self.sigma_tau_Z = self.sigma_Z[0], self.sigma_Z[1]
+
+			else:
+				self.v_Z, self.tau_Z = self.params_Z[0], np.nan
+			
+				self.sigma_v_Z, self.sigma_tau_Z = self.sigma_Z[0], np.nan
+
+			# Save the resulting fit parameters in a file
+
+			params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z]})
+
+			params_df.to_csv(os.path.join(self.fittingFolder, saveFile))
+
+		else:
+
+			print('Loading fitted parameters from file ...')
+			params_df = pd.read_csv(os.path.join(self.fittingFolder, saveFile))
+
+			print(params_df)
+
+			self.v_X, self.tau_X = params_df['v_X'], params_df['tau_X']
+			
+			self.sigma_v_X, self.sigma_tau_X = params_df['sigma_v_X'], params_df['sigma_tau_X']
+
+			self.v_Z, self.tau_Z = params_df['v_Z'], params_df['tau_Z']
+			
+			self.sigma_v_Z, self.sigma_tau_Z = params_df['sigma_v_Z'], params_df['sigma_tau_Z']
+
+
+			self.params_X = np.array([self.v_X, self.tau_X])
+
+			if(self.tau_Z is not np.nan):
+				self.params_Z = np.array([self.v_Z, self.tau_Z])
+			else:
+				self.params_Z = np.array([self.v_Z])
+
+
+
+
 				
 				
 #------------------------------------------------------------------------------
@@ -740,7 +1002,9 @@ class msdanalyzer:
 
 	  
 
-
+#------------------------------------------------------------------------------
+		# Plotting functions
+#------------------------------------------------------------------------------
 
 	def plot_velocityDist(self):
 
@@ -779,24 +1043,9 @@ class msdanalyzer:
 			my_pal = {'VelocityZ': 'b' ,'VelocityX': 'r'}
 
 			plt.savefig(self.Organism+'_'+self.Condition+'.svg', dpi = 150)
-
-
-
-
-		
-
-
-
-
-
-
-			
 		
 				
-#------------------------------------------------------------------------------
-		# Plotting functions
-#------------------------------------------------------------------------------
-	def plotMSD(self, fileName = None, figname = 1, saveFolder = None, orgName = None, plot_analytical = False):
+	def plotMSD(self, figname = 1, plot_analytical = False, plot_fit = False, savefig = False):
 		
 
 #        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
@@ -817,8 +1066,9 @@ class msdanalyzer:
 		ax3.set_ylabel('MSD')
 		plt.xlim(0,np.max(self.delays))
 		plt.legend(loc='upper left')
-		if(saveFolder is not None and orgName is not None):
-			plt.savefig(os.path.join(saveFolder,orgName+'_MSD_Linear.svg'),bbox_inches='tight',dpi=150)
+		if(savefig is True):
+			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_Linear.svg'),bbox_inches='tight',dpi=150)
+			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_Linear.png'),bbox_inches='tight',dpi=150)
 
 		plt.show()
 		
@@ -833,26 +1083,37 @@ class msdanalyzer:
 		
 		plt.figure(figsize = (4,3))
 		ax1 = plt.gca()
-		ax1.plot(self.delays, self.MSD_X, color = 'r', label = 'Horizontal (X)')
+		ax1.scatter(self.delays, self.MSD_X, 20, color = 'r', marker = 'o', label = 'Horizontal (X)', alpha = 0.5)
+
+		if(plot_fit is True):
+
+			# X displacement fit with Taylor function
+			ax1.plot(self.delays, self.f(self.delays, self.params_X), 'k--', label = 'X - WLS-ICE Fit (Taylor equation)')
+		
+		ax1.scatter(self.delays, self.MSD_Z, 20, color = 'b', marker = 's', label = 'Vertical (Z)', alpha =0.5)#        ax3.set_yscale('log')
+
+		if(plot_fit is True):
+			# X displacement fit with Taylor function
+			if(self.tau_Z is np.nan):
+				ax1.plot(self.delays, self.f_ballistic(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Ballistic')
+			else:
+				ax1.plot(self.delays, self.f(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Taylor equation)')
+
+
+		# ax3.plot(time,X_linear,'k-')
+		# ax3.plot(time,X_quad, 'k--')
 		ax1.set_yscale('log')
 		ax1.set_xscale('log')
+		ax1.set_xlabel('Time (s)')
+		ax1.set_ylabel('MSD')
 		
-		ax3 = plt.gca()
-		
-		ax3.plot(self.delays, self.MSD_Z, color = 'b', label = 'Vertical')#        ax3.set_yscale('log')
-		ax3.plot(time,X_linear,'k-')
-		ax3.plot(time,X_quad, 'k--')
-		ax3.set_yscale('log')
-		ax3.set_xscale('log')
-		ax3.set_xlabel('Time (s)')
-		ax3.set_ylabel('MSD')
-		
-		plt.xlim(0,np.max(self.delays))
+		# plt.xlim(0,np.max(self.delays))
 #        plt.legend(loc='upper left')
-		if(saveFolder is not None and orgName is not None):
+		if(savefig is True):
+			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_Log.svg'),bbox_inches='tight',dpi=150)
+			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_Log.png'),bbox_inches='tight',dpi=150)
 
-			plt.savefig(os.path.join(saveFolder,orgName+'_MSD_Log.svg'),bbox_inches='tight',dpi=150)
-
+		plt.legend()
 		plt.show()
 
 

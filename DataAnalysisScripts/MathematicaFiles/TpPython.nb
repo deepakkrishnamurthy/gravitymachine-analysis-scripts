@@ -1,0 +1,416 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     17055,        406]
+NotebookOptionsPosition[     16806,        393]
+NotebookOutlinePosition[     17154,        408]
+CellTagsIndexPosition[     17111,        405]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ToPython", "[", 
+   RowBox[{"x_", ",", 
+    RowBox[{"numpyprefix_:", " ", "\"\<numpy\>\""}]}], "]"}], ":=", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"expression", "=", "x"}], ",", "greekrule", ",", "PythonForm", 
+      ",", 
+      RowBox[{"numpypre", "=", "numpyprefix"}], ",", "lp", ",", "rp", ",", 
+      "a", ",", "b"}], "}"}], ",", 
+    RowBox[{"(*", 
+     RowBox[{
+      RowBox[{
+       RowBox[{
+       "FUNCTION", " ", "TO", " ", "CONVERT", " ", "MATHEMATICA", " ", 
+        "EXPRESSION", " ", "TO", " ", "NUMPY"}], ";", "\[IndentingNewLine]", 
+       RowBox[{"--", 
+        RowBox[{"--", 
+         RowBox[{"--", 
+          RowBox[{"--", 
+           RowBox[{"--", 
+            RowBox[{"--", 
+             RowBox[{"--", 
+              RowBox[{"--", 
+               RowBox[{"--", 
+                RowBox[{"--", 
+                 RowBox[{"--", 
+                  RowBox[{"--", 
+                   RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{
+                    "--", "--"}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]\
+}], ";", "\[IndentingNewLine]", 
+       RowBox[{"INPUT", " ", "ARGUMENTS"}], ";", "\[IndentingNewLine]", 
+       RowBox[{"x", ":", 
+        RowBox[{"your", " ", "mathematica", " ", "expression"}]}]}], ",", 
+      RowBox[{"it", " ", "can", " ", "be", " ", "numbers"}], ",", "literals", 
+      ",", 
+      RowBox[{
+       RowBox[{"complexes", " ", "or", " ", "lists"}], ";", 
+       "\[IndentingNewLine]", 
+       RowBox[{"numpy\[LetterSpace]prefix", ":", 
+        RowBox[{
+        "string", " ", "defining", " ", "your", " ", "Numpy", " ", "import", 
+         " ", "prefix"}]}]}], ",", 
+      RowBox[{
+       RowBox[{"e", ".", "g", "."}], ":", 
+       RowBox[{
+       "if", " ", "your", " ", "used", " ", "\"\<import numpy as np\>\""}]}], 
+      ",", 
+      RowBox[{
+      "your", " ", "prefix", " ", "should", " ", "be", " ", "the", " ", 
+       "string", " ", "\"\<np\>\"", " ", "if", " ", "your", " ", "used", " ", 
+       "\"\<from numpy import *\>\""}], ",", 
+      RowBox[{
+       RowBox[{
+       "your", " ", "prefix", " ", "should", " ", "be", " ", "the", " ", 
+        "empty", " ", "string", " ", "\"\<\>\""}], ";", "\[IndentingNewLine]",
+        "OUTPUT", ";", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"the", " ", "Numpy", " ", "python"}], "-", 
+        RowBox[{"ready", " ", "expression", " ", 
+         RowBox[{"(", 
+          RowBox[{
+          "to", " ", "be", " ", "copied", " ", "as", " ", "a", " ", 
+           "string"}], ")"}]}]}], ";", "\[IndentingNewLine]", 
+       RowBox[{"!", 
+        RowBox[{
+        "The", " ", "formatted", " ", "expression", " ", "will", " ", "be", 
+         " ", "copied", " ", "ot", " ", "your", " ", "clipboard"}]}]}], ",", 
+      RowBox[{
+       RowBox[{"ready", " ", "to", " ", "paste", " ", "on", " ", 
+        RowBox[{"Python", "!"}]}], ";", "\[IndentingNewLine]", 
+       RowBox[{"--", 
+        RowBox[{"--", 
+         RowBox[{"--", 
+          RowBox[{"--", 
+           RowBox[{"--", 
+            RowBox[{"--", 
+             RowBox[{"--", 
+              RowBox[{"--", 
+               RowBox[{"--", 
+                RowBox[{"--", 
+                 RowBox[{"--", 
+                  RowBox[{"--", 
+                   RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{"--", 
+                    RowBox[{
+                    "--", "--"}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]\
+}]}], ";", "\[IndentingNewLine]", 
+       RowBox[{
+       "Not", " ", "tested", " ", "for", " ", "every", " ", "possible", " ", 
+        "combination"}], ";", 
+       RowBox[{"use", " ", "at", " ", "your", " ", "risk"}]}], ",", 
+      RowBox[{"by", " ", "Gustavo", " ", "Wiederhecker"}]}], "*)"}], 
+    RowBox[{
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{"numpyprefix", "\[Equal]", "\"\<\>\""}], ",", 
+       RowBox[{"sep", "=", "\"\<\>\""}], ",", 
+       RowBox[{"sep", "=", "\"\<.\>\""}]}], "]"}], ";", 
+     RowBox[{"(*", 
+      RowBox[{
+       RowBox[{"if", " ", "no", " ", "prefix", " ", "is", " ", "included"}], 
+       ",", 
+       RowBox[{
+       "the", " ", "\"\<.\>\"", " ", "separator", " ", "is", " ", "not", " ", 
+        "used"}]}], "*)"}], 
+     RowBox[{"lp", "=", "\"\<( \>\""}], ";", "\[IndentingNewLine]", 
+     RowBox[{"rp", "=", "\"\< )\>\""}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", 
+       RowBox[{"Rational", "[", 
+        RowBox[{"a_", ",", "b_"}], "]"}], "]"}], ":=", 
+      RowBox[{
+       RowBox[{"PythonForm", "[", "a", "]"}], "<>", "\"\</\>\"", "<>", 
+       RowBox[{"PythonForm", "[", "b", "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", 
+       RowBox[{"Complex", "[", 
+        RowBox[{"a_", ",", "b_"}], "]"}], "]"}], ":=", 
+      RowBox[{"\"\<complex\>\"", "<>", "lp", "<>", 
+       RowBox[{"PythonForm", "[", "a", "]"}], "<>", "\"\<,\>\"", "<>", 
+       RowBox[{"PythonForm", "[", "b", "]"}], "<>", "rp"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", 
+       RowBox[{"Times", "[", 
+        RowBox[{"a_", ",", "b_"}], "]"}], "]"}], ":=", 
+      RowBox[{
+       RowBox[{"PythonForm", "[", "a", "]"}], "<>", "\"\< * \>\"", "<>", 
+       RowBox[{"PythonForm", "[", "b", "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", 
+       RowBox[{"Plus", "[", 
+        RowBox[{"a_", ",", "b_"}], "]"}], "]"}], ":=", 
+      RowBox[{"lp", "<>", 
+       RowBox[{"PythonForm", "[", "a", "]"}], "<>", "\"\< + \>\"", "<>", 
+       RowBox[{"PythonForm", "[", "b", "]"}], "<>", "rp"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", 
+       RowBox[{"h_", "[", "args__", "]"}], "]"}], ":=", 
+      RowBox[{"numpypre", "<>", "sep", "<>", 
+       RowBox[{"ToLowerCase", "[", 
+        RowBox[{"PythonForm", "[", "h", "]"}], "]"}], "<>", "lp", "<>", 
+       RowBox[{"PythonForm", "[", "args", "]"}], "<>", "rp"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", 
+       RowBox[{"Power", "[", 
+        RowBox[{"a_", ",", "b_"}], "]"}], "]"}], ":=", 
+      RowBox[{"lp", "<>", 
+       RowBox[{"PythonForm", "[", "a", "]"}], "<>", "rp", "<>", "\"\<**\>\"", 
+       "<>", "lp", "<>", 
+       RowBox[{"PythonForm", "[", "b", "]"}], "<>", "rp"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "a_ListQ", "]"}], ":=", 
+      RowBox[{"numpypre", "<>", "sep", "<>", "\"\<array\>\"", "<>", 
+       RowBox[{"StringReplace", "[", 
+        RowBox[{
+         RowBox[{"ToString", "[", "a", "]"}], ",", 
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"\"\<{\>\"", "\[Rule]", "\"\<[\>\""}], ",", 
+           RowBox[{"\"\<}\>\"", "\[Rule]", "\"\<]\>\""}]}], "}"}]}], 
+        "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "Arg", "]"}], "=", 
+      RowBox[{"numpypre", "<>", "sep", "<>", "\"\<angle\>\""}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"(*", 
+      RowBox[{
+      "Some", " ", "functions", " ", "that", " ", "are", " ", "note", " ", 
+       "defined", " ", "in", " ", "numpy"}], "*)"}], 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "Csc", "]"}], ":=", 
+      RowBox[{
+      "\"\<1/\>\"", "<>", "numpypre", "<>", "sep", "<>", "\"\<sin\>\""}]}], 
+     ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "Sec", "]"}], ":=", 
+      RowBox[{
+      "\"\<1/\>\"", "<>", "numpypre", "<>", "sep", "<>", "\"\<cos\>\""}]}], 
+     ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "Cot", "]"}], ":=", 
+      RowBox[{
+      "\"\<1/\>\"", "<>", "numpypre", "<>", "sep", "<>", "\"\<tan\>\""}]}], 
+     ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "Csch", "]"}], ":=", 
+      RowBox[{
+      "\"\<1/\>\"", "<>", "numpypre", "<>", "sep", "<>", "\"\<sinh\>\""}]}], 
+     ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "Sech", "]"}], ":=", 
+      RowBox[{
+      "\"\<1/\>\"", "<>", "numpypre", "<>", "sep", "<>", "\"\<cosh\>\""}]}], 
+     ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "Coth", "]"}], ":=", 
+      RowBox[{
+      "\"\<1/\>\"", "<>", "numpypre", "<>", "sep", "<>", "\"\<tanh\>\""}]}], 
+     ";", "\[IndentingNewLine]", 
+     RowBox[{"(*", 
+      RowBox[{"Handling", " ", "arrays"}], "*)"}], 
+     RowBox[{
+      RowBox[{"PythonForm", "[", 
+       RowBox[{"List", "[", "args__", "]"}], "]"}], ":=", 
+      RowBox[{
+      "numpypre", "<>", "sep", "<>", "\"\<array\>\"", "<>", "lp", "<>", 
+       "\"\<[\>\"", "<>", 
+       RowBox[{"Table", "[", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"PythonForm", "[", 
+           RowBox[{
+            RowBox[{"{", "args", "}"}], "[", 
+            RowBox[{"[", "ii", "]"}], "]"}], "]"}], "<>", "\"\<,\>\""}], ",", 
+         RowBox[{"{", 
+          RowBox[{"ii", ",", "1", ",", 
+           RowBox[{"Length", "@", 
+            RowBox[{"{", "args", "}"}]}]}], "}"}]}], "]"}], "<>", "\"\<]\>\"",
+        "<>", "rp"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"(*", 
+      RowBox[{"Pi", " ", "and", " ", "E"}], "*)"}], 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "\[Pi]", "]"}], "=", 
+      RowBox[{"numpypre", "<>", "sep", "<>", "\"\<pi\>\""}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "E", "]"}], "=", 
+      RowBox[{"numpypre", "<>", "sep", "<>", "\"\<e\>\""}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"(*", 
+      RowBox[{
+       RowBox[{"real", " ", "numbers"}], ",", 
+       RowBox[{"engineering", " ", "notation"}]}], "*)"}], 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "r_Real", "]"}], ":=", 
+      RowBox[{"Block", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"a", "=", 
+          RowBox[{"MantissaExponent", "[", "r", "]"}]}], "}"}], ",", 
+        RowBox[{"If", "[", 
+         RowBox[{
+          RowBox[{"r", "\[GreaterEqual]", "0"}], ",", 
+          RowBox[{
+           RowBox[{"ToString", "[", 
+            RowBox[{"N", "[", 
+             RowBox[{
+              RowBox[{"a", "[", 
+               RowBox[{"[", "1", "]"}], "]"}], ",", "6"}], "]"}], "]"}], 
+           "<>", "\"\<e\>\"", "<>", 
+           RowBox[{"ToString", "[", 
+            RowBox[{"a", "[", 
+             RowBox[{"[", "2", "]"}], "]"}], "]"}]}], ",", 
+          RowBox[{"\"\<(\>\"", "<>", 
+           RowBox[{"ToString", "[", 
+            RowBox[{"N", "[", 
+             RowBox[{
+              RowBox[{"a", "[", 
+               RowBox[{"[", "1", "]"}], "]"}], ",", "6"}], "]"}], "]"}], 
+           "<>", "\"\<e\>\"", "<>", 
+           RowBox[{"ToString", "[", 
+            RowBox[{"a", "[", 
+             RowBox[{"[", "2", "]"}], "]"}], "]"}], "<>", "\"\<)\>\""}]}], 
+         "]"}]}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"(*", 
+      RowBox[{"Greek", " ", "characters"}], "*)"}], 
+     RowBox[{"greekrule", "=", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"\"\<\[Alpha]\>\"", "\[Rule]", "\"\<alpha\>\""}], ",", 
+        RowBox[{"\"\<\[Beta]\>\"", "\[Rule]", "\"\<beta\>\""}], ",", 
+        RowBox[{"\"\<\[Gamma]\>\"", "\[Rule]", "\"\<gamma\>\""}], ",", 
+        RowBox[{"\"\<\[Delta]\>\"", "\[Rule]", "\"\<delta\>\""}], ",", 
+        RowBox[{
+        "\"\<\[CurlyEpsilon]\>\"", "\[Rule]", "\"\<curlyepsilon\>\""}], ",", 
+        RowBox[{"\"\<\[Zeta]\>\"", "\[Rule]", "\"\<zeta\>\""}], ",", 
+        RowBox[{"\"\<\[Eta]\>\"", "\[Rule]", "\"\<eta\>\""}], ",", 
+        RowBox[{"\"\<\[Theta]\>\"", "\[Rule]", "\"\<theta\>\""}], ",", 
+        RowBox[{"\"\<\[Iota]\>\"", "\[Rule]", "\"\<iota\>\""}], ",", 
+        RowBox[{"\"\<\[Kappa]\>\"", "\[Rule]", "\"\<kappa\>\""}], ",", 
+        RowBox[{"\"\<\[Lambda]\>\"", "\[Rule]", "\"\<lambda\>\""}], ",", 
+        RowBox[{"\"\<\[Mu]\>\"", "\[Rule]", "\"\<mu\>\""}], ",", 
+        RowBox[{"\"\<\[Nu]\>\"", "\[Rule]", "\"\<nu\>\""}], ",", 
+        RowBox[{"\"\<\[Xi]\>\"", "\[Rule]", "\"\<xi\>\""}], ",", 
+        RowBox[{"\"\<\[Omicron]\>\"", "\[Rule]", "\"\<omicron\>\""}], ",", 
+        RowBox[{"\"\<\[Pi]\>\"", "\[Rule]", "\"\<pi\>\""}], ",", 
+        RowBox[{"\"\<\[Rho]\>\"", "\[Rule]", "\"\<rho\>\""}], ",", 
+        RowBox[{"\"\<\[FinalSigma]\>\"", "\[Rule]", "\"\<finalsigma\>\""}], 
+        ",", 
+        RowBox[{"\"\<\[Sigma]\>\"", "\[Rule]", "\"\<sigma\>\""}], ",", 
+        RowBox[{"\"\<\[Tau]\>\"", "\[Rule]", "\"\<tau\>\""}], ",", 
+        RowBox[{"\"\<\[Upsilon]\>\"", "\[Rule]", "\"\<upsilon\>\""}], ",", 
+        RowBox[{"\"\<\[CurlyPhi]\>\"", "\[Rule]", "\"\<curlyphi\>\""}], ",", 
+        RowBox[{"\"\<\[Chi]\>\"", "\[Rule]", "\"\<chi\>\""}], ",", 
+        RowBox[{"\"\<\[Psi]\>\"", "\[Rule]", "\"\<psi\>\""}], ",", 
+        RowBox[{"\"\<\[Omega]\>\"", "\[Rule]", "\"\<omega\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalAlpha]\>\"", "\[Rule]", "\"\<Alpha\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalBeta]\>\"", "\[Rule]", "\"\<Beta\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalGamma]\>\"", "\[Rule]", "\"\<Gamma\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalDelta]\>\"", "\[Rule]", "\"\<Delta\>\""}], ",", 
+        RowBox[{
+        "\"\<\[CapitalEpsilon]\>\"", "\[Rule]", "\"\<CurlyEpsilon\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalZeta]\>\"", "\[Rule]", "\"\<Zeta\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalEta]\>\"", "\[Rule]", "\"\<Eta\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalTheta]\>\"", "\[Rule]", "\"\<Theta\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalIota]\>\"", "\[Rule]", "\"\<Iota\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalKappa]\>\"", "\[Rule]", "\"\<Kappa\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalLambda]\>\"", "\[Rule]", "\"\<Lambda\>\""}], 
+        ",", 
+        RowBox[{"\"\<\[CapitalMu]\>\"", "\[Rule]", "\"\<Mu\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalNu]\>\"", "\[Rule]", "\"\<Nu\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalXi]\>\"", "\[Rule]", "\"\<Xi\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalOmicron]\>\"", "\[Rule]", "\"\<Omicron\>\""}], 
+        ",", 
+        RowBox[{"\"\<\[CapitalPi]\>\"", "\[Rule]", "\"\<Pi\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalRho]\>\"", "\[Rule]", "\"\<Rho\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalSigma]\>\"", "\[Rule]", "\"\<Sigma\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalTau]\>\"", "\[Rule]", "\"\<Tau\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalUpsilon]\>\"", "\[Rule]", "\"\<Upsilon\>\""}], 
+        ",", 
+        RowBox[{"\"\<\[CapitalPhi]\>\"", "\[Rule]", "\"\<CurlyPhi\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalChi]\>\"", "\[Rule]", "\"\<Chi\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalPsi]\>\"", "\[Rule]", "\"\<Psi\>\""}], ",", 
+        RowBox[{"\"\<\[CapitalOmega]\>\"", "\[Rule]", "\"\<Omega\>\""}]}], 
+       "}"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"(*", 
+      RowBox[{"Everything", " ", "else"}], "*)"}], 
+     RowBox[{
+      RowBox[{"PythonForm", "[", "allOther_", "]"}], ":=", 
+      RowBox[{"StringReplace", "[", 
+       RowBox[{
+        RowBox[{"ToString", "[", 
+         RowBox[{"allOther", ",", "FortranForm"}], "]"}], ",", "greekrule"}], 
+       "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"(*", 
+      RowBox[{"Copy", " ", "results", " ", "to", " ", "clipboard"}], "*)"}], 
+     RowBox[{"CopyToClipboard", "[", 
+      RowBox[{"PythonForm", "[", "expression", "]"}], "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"PythonForm", "[", "expression", "]"}]}]}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.7781034478378615`*^9, 3.7781034478398294`*^9}}]
+},
+WindowSize->{767, 793},
+WindowMargins->{{Automatic, 437}, {-31, Automatic}},
+FrontEndVersion->"10.0 for Microsoft Windows (64-bit) (September 9, 2014)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 16244, 371, 1292, "Input"]
+}
+]
+*)
+
+(* End of internal cache information *)
+

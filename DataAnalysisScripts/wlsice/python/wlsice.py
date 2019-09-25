@@ -181,10 +181,12 @@ def fit(time, trajectories, guess, min_method='nm'):
     M,N = np.shape(trajectories)
 
     C, y_mean = makeCovarianceMatrix(trajectories)
+
     y_sigma = np.sqrt(np.diag(C))
 
     # LS-ICE
     C = C / M
+
     R = np.linalg.inv(np.diag(np.diag(C), 0))
 
     # Do the parameter fitting, return: [opt_parameters, errors, chi2_min]
