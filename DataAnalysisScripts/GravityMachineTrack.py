@@ -43,7 +43,7 @@ def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label = None):
 
 class gravMachineTrack:
 
-    def __init__(self, trackFile = None, organism = 'Plankton', condition = 'Control', Tmin=0, Tmax=0, frame_min = None, frame_max = None, indexing = 'time', computeDisp = False, findDims = False, orgDim = None, overwrite_piv = False, overwrite_velocity = False, scaleFactor = 20, localTime = 0, trackDescription = 'Normal'):
+    def __init__(self, trackFile = None, organism = 'Plankton', condition = 'Control', Tmin=0, Tmax=0, frame_min = None, frame_max = None, indexing = 'time', computeDisp = False, findDims = False, orgDim = None, overwrite_piv = False, overwrite_velocity = False, scaleFactor = 20, localTime = 0, trackDescription = 'Normal', pixelPermm = None):
         
         self.Organism = organism
         self.Condition = condition
@@ -190,8 +190,15 @@ class gravMachineTrack:
                 self.overlap = 64
                 self.searchArea = 128
                 
-                self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
-                
+                print('Image height, Image width: {}, {}'.format(self.imH, self.imW))
+                if(pixelPermm is None):
+                    self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
+                else:
+                    self.pixelPermm = pixelPermm*(self.imW/1920)
+
+
+                print('Pixel per mm : {}'.format(self.pixelPermm))
+
                 self.mmPerPixel = 1/self.pixelPermm
                 
                 print('Pixels per mm: {}'.format(self.pixelPermm))
@@ -208,7 +215,7 @@ class gravMachineTrack:
             self.scaleFactor = scaleFactor
             if(findDims):
                 self.setColorThresholds()
-                self.findOrgDims(circle=1, overwrite = True)
+                self.findOrgDims(circle=1, overwrite = False)
             else:
                 self.OrgDim = orgDim
             
@@ -859,7 +866,7 @@ class gravMachineTrack:
             threshHigh = (v1_max,v2_max,v3_max)
             
             # Save this threshold to file
-            with open(os.path.join(self.path,saveFile), 'wb') as f:  # Python 3: open(..., 'wb')
+            with open(os.path.join(self.root,saveFile), 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump((threshLow, threshHigh), f)
         else:
             # If available just load the threshold

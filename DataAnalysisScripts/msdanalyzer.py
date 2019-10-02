@@ -77,12 +77,13 @@ class msdanalyzer:
 			self.genRunTumbleTraj(v = v, tau = tau)
 			
 		else:
+			self.maxDelay = 50
+			self.timeWindow = 5
 			if(Tracks is not None):
 				self.Tracks = Tracks
 				self.nTracks = len(Tracks)
 				 # Maximum delay over which we want to calculate correlations
-				self.maxDelay = 50
-				self.timeWindow = 5
+				
 				self.getMinDiff()
 
 				if(ensemble_method == 'mintrack'):
@@ -610,14 +611,14 @@ class msdanalyzer:
 			if(save is True):
 				dataLen = len(self.MSD_X)
 
-				OrgDim_mean, OrgDim_std = self.get_Mean_Std('OrgDim')
+				self.OrgSize_mean, self.OrgSize_std = self.get_Mean_Std('OrgDim')
 
-				print('Mean and Std of Organism size : {} +- {}(um)'.format(OrgDim_mean, OrgDim_std))
+				print('Mean and Std of Organism size : {} +- {}(um)'.format(self.OrgSize_mean, self.OrgSize_std))
 
 				# Save the results of the MSD analysis as numpy arrays/ pandas dataframes ...
 				dataFrame = pd.DataFrame({'Organism':[], 'nTracks':[], 'Total duration':[], 'OrgSize mean':[],'OrgSize std':[],'Condition':[], 'delays':[],'MSD_X':[],'MSD_Y':[], 'MSD_Z':[], 'stdev_X':[], 'stdev_Y':[], 'stdev_Z':[]})
 
-				dataFrame = dataFrame.append(pd.DataFrame({'Organism':np.repeat(self.Organism,dataLen,axis = 0), 'nTracks':np.repeat(self.nTracks,dataLen,axis = 0), 'Total duration':np.repeat(self.totalTrackDuration,dataLen,axis = 0), 'OrgSize mean':np.repeat(OrgDim_mean,dataLen,axis = 0), 'OrgSize std':np.repeat(OrgDim_std,dataLen,axis = 0), 'Condition':np.repeat(self.Condition,dataLen,axis = 0),'delays':self.delays,'MSD_X':self.MSD_X,'MSD_Y':self.MSD_Y, 'MSD_Z':self.MSD_Z, 'stdev_X': self.stdev_X, 'stdev_Y':self.stdev_Y, 'stdev_Z':self.stdev_Z}))
+				dataFrame = dataFrame.append(pd.DataFrame({'Organism':np.repeat(self.Organism,dataLen,axis = 0), 'nTracks':np.repeat(self.nTracks,dataLen,axis = 0), 'Total duration':np.repeat(self.totalTrackDuration,dataLen,axis = 0), 'OrgSize mean':np.repeat(self.OrgSize_mean,dataLen,axis = 0), 'OrgSize std':np.repeat(self.OrgSize_std,dataLen,axis = 0), 'Condition':np.repeat(self.Condition,dataLen,axis = 0),'delays':self.delays,'MSD_X':self.MSD_X,'MSD_Y':self.MSD_Y, 'MSD_Z':self.MSD_Z, 'stdev_X': self.stdev_X, 'stdev_Y':self.stdev_Y, 'stdev_Z':self.stdev_Z}))
 				
 				dataFrame.to_csv(os.path.join(self.rootFolder, saveFile))
 
@@ -638,6 +639,8 @@ class msdanalyzer:
 			for attr in keys:
 
 				setattr(self, attr, dataFrame[attr])
+
+			self.OrgSize_mean, self.OrgSize_std = dataFrame['OrgSize mean'][0], dataFrame['OrgSize std'][0]
 
 			
 	def computeLocalSlope(self, TimeArray, Track):
@@ -866,7 +869,7 @@ class msdanalyzer:
 
 		  # RESULT:
 		print("# trajectories M = {},\tsampling times N={}, t_0={}".format(M, N, Time[0]))
-		print("# Optimal param:\t {}".format(params))
+		print("# Optimal param:\t {}".format(abs(params)))
 		print("# Sigma:\t {}".format(sigma))
 		print("# Chi-square value: \t {}".format(chi2_min))
 
@@ -909,26 +912,24 @@ class msdanalyzer:
 
 			self.params_Z, self.sigma_Z, self.chi2_min_Z, self.coeff_det_Z = self.performWLSICEfit(Time, Traj_Z, function = 'ballistic')
 
-			print(self.params_X)
-			print(type(self.params_X))
 
-			self.v_X, self.tau_X = self.params_X[0], self.params_X[1]
+			self.v_X, self.tau_X = abs(self.params_X[0]), self.params_X[1]
 			
 			self.sigma_v_X, self.sigma_tau_X = self.sigma_X[0], self.sigma_X[1]
 
 			if(len(self.params_Z)==2):
-				self.v_Z, self.tau_Z = self.params_Z[0], self.params_Z[1]
+				self.v_Z, self.tau_Z = abs(self.params_Z[0]), self.params_Z[1]
 			
 				self.sigma_v_Z, self.sigma_tau_Z = self.sigma_Z[0], self.sigma_Z[1]
 
 			else:
-				self.v_Z, self.tau_Z = self.params_Z[0], np.nan
+				self.v_Z, self.tau_Z = abs(self.params_Z[0]), np.nan
 			
 				self.sigma_v_Z, self.sigma_tau_Z = self.sigma_Z[0], np.nan
 
 			# Save the resulting fit parameters in a file
 
-			params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z]})
+			params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'OrgSize_mean':[self.OrgSize_mean], 'OrgSize_std':[self.OrgSize_std], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z]})
 
 			params_df.to_csv(os.path.join(self.fittingFolder, saveFile))
 
@@ -936,8 +937,6 @@ class msdanalyzer:
 
 			print('Loading fitted parameters from file ...')
 			params_df = pd.read_csv(os.path.join(self.fittingFolder, saveFile))
-
-			print(params_df)
 
 			self.v_X, self.tau_X = params_df['v_X'], params_df['tau_X']
 			
@@ -950,11 +949,13 @@ class msdanalyzer:
 
 			self.params_X = np.array([self.v_X, self.tau_X])
 
-			if(self.tau_Z is not np.nan):
+			if(not np.isnan(self.tau_Z).any()):
 				self.params_Z = np.array([self.v_Z, self.tau_Z])
 			else:
 				self.params_Z = np.array([self.v_Z])
 
+			print(self.params_X)
+			print(self.params_Z)
 
 
 
@@ -1049,27 +1050,35 @@ class msdanalyzer:
 		
 
 #        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+
+
 		
 		plt.figure(figsize = (8,6))
-		ax1 = plt.gca()
-		PlotUtils.errorfill(self.delays, self.MSD_X, self.stdev_X, ax = ax1, color = 'r', label = 'Horizontal (X)')
-
-		ax3 = plt.gca()
+		ax0 = plt.gca()
+		PlotUtils.errorfill(self.delays, self.MSD_X, self.stdev_X, ax = ax0, color = 'r', label = 'Horizontal (X)')
 		
-		PlotUtils.errorfill(self.delays, self.MSD_Z, self.stdev_Z, ax = ax3, color = 'b', label = 'Vertical (Z)')
+		PlotUtils.errorfill(self.delays, self.MSD_Z, self.stdev_Z, ax = ax0, color = 'b', label = 'Vertical (Z)')
 #        
 		if(plot_analytical==True and self.testFlag==True):
-			ax3.plot(self.delays, self.DiffCoeff*self.delays, color = 'k', marker = 'o')
+			ax0.plot(self.delays, self.DiffCoeff*self.delays, color = 'k', marker = 'o')
 
 
-		ax3.set_xlabel('Time (s)')
-		ax3.set_ylabel('MSD')
+		ax0.set_xlabel('Time (s)')
+		ax0.set_ylabel('MSD')
 		plt.xlim(0,np.max(self.delays))
-		plt.legend(loc='upper left')
+		plt.legend(loc='upper left', frameon=False)
+		
+
+		if(np.isnan(self.tau_Z).any()):
+			ax0.plot(self.delays, self.f_ballistic(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Ballistic')
+		else:
+			ax0.plot(self.delays, self.f(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Taylor equation)')
+
+		plt.title(self.Organism + '_' + self.Condition)
+
 		if(savefig is True):
 			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_Linear.svg'),bbox_inches='tight',dpi=150)
 			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_Linear.png'),bbox_inches='tight',dpi=150)
-
 		plt.show()
 		
 		
@@ -1081,7 +1090,7 @@ class msdanalyzer:
 		X_quad = A*(time**2)
 		
 		
-		plt.figure(figsize = (4,3))
+		plt.figure(figsize = (8,6))
 		ax1 = plt.gca()
 		ax1.scatter(self.delays, self.MSD_X, 20, color = 'r', marker = 'o', label = 'Horizontal (X)', alpha = 0.5)
 
@@ -1094,27 +1103,54 @@ class msdanalyzer:
 
 		if(plot_fit is True):
 			# X displacement fit with Taylor function
-			if(self.tau_Z is np.nan):
+			if(np.isnan(self.tau_Z).any()):
 				ax1.plot(self.delays, self.f_ballistic(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Ballistic')
 			else:
 				ax1.plot(self.delays, self.f(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Taylor equation)')
 
 
-		# ax3.plot(time,X_linear,'k-')
-		# ax3.plot(time,X_quad, 'k--')
+		ax1.plot(time,X_linear,'k--')
+		ax1.plot(time,X_quad, 'k-')
 		ax1.set_yscale('log')
 		ax1.set_xscale('log')
 		ax1.set_xlabel('Time (s)')
 		ax1.set_ylabel('MSD')
 		
 		# plt.xlim(0,np.max(self.delays))
-#        plt.legend(loc='upper left')
+		plt.legend(loc='upper left', frameon=False)
+	
+
+		plt.title(self.Organism + '_' + self.Condition)
+
 		if(savefig is True):
 			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_Log.svg'),bbox_inches='tight',dpi=150)
 			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_Log.png'),bbox_inches='tight',dpi=150)
-
-		plt.legend()
 		plt.show()
+
+
+	def plotLocalSlope(self, savefig = False):
+
+		Delays_Z, Slope_Z = self.computeLocalSlope(self.delays, self.MSD_Z)
+		Delays_X, Slope_X = self.computeLocalSlope(self.delays, self.MSD_X)
+
+		plt.figure()
+		plt.plot(Delays_X, Slope_X, color = 'r', marker = 'o', linestyle = '--', label = 'Horizontal (X)')
+		plt.plot(Delays_Z, Slope_Z, color = 'b', marker = 's', linestyle = '-', label = 'Vertical (Z)')
+		plt.ylim(0,2.5)
+		plt.xlabel('Time (s)')
+		plt.ylabel('Local slope of MSD curve')
+		plt.title(self.Organism + '_' + self.Condition)
+
+		plt.legend(loc='best', frameon=False)
+
+		if(savefig is True):
+			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_LocalSlope.svg'),bbox_inches='tight',dpi=150)
+			plt.savefig(os.path.join(self.figuresFolder,self.saveFile+'_MSD_LocalSlope.png'),bbox_inches='tight',dpi=150)
+
+		plt.show()
+
+
+
 
 
 

@@ -27,7 +27,7 @@ minTrackDuration = 30
 # Folder in which to save analysis results
 saveFolder = 'C:/Users/deepak/Dropbox/GravityMachine/ExperimentResults/MSD_Analysis'
     
-analysis_file = 'C:/Users/deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/Volvox.csv'
+analysis_file = 'C:/Users/deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/AcornWorm.csv'
 
 analysis_df = pd.read_csv(analysis_file)
 
@@ -47,7 +47,7 @@ TrackArray = []
 
 nUniqueConditions = len(unique_conditions)
 
-overwrite = True
+overwrite = False
 
 # Assemble the list of unique conditions i.e unique combinations of Organisms, Condition. Each Unique Condition will in general have several tracks
 
@@ -71,7 +71,6 @@ for ii in range(nUniqueConditions):
         
         for jj in range(nTracksSameCondition):
             
-            
             Track_df = tracks_sameCondition.iloc[jj]
             
             
@@ -79,7 +78,7 @@ for ii in range(nUniqueConditions):
             
             print('Loading {}'.format(full_path))
             
-            track = GravityMachineTrack.gravMachineTrack(trackFile = full_path , organism = Track_df['Organism'], condition = Track_df['Condition'], Tmin = Track_df['Tmin'], Tmax = Track_df['Tmax'], findDims = True)
+            track = GravityMachineTrack.gravMachineTrack(trackFile = full_path , organism = Track_df['Organism'], condition = Track_df['Condition'], Tmin = Track_df['Tmin'], Tmax = Track_df['Tmax'], findDims = True, pixelPermm = 1122.67)
             
                     
             # Filter tracks based on min Track Duration
@@ -107,7 +106,15 @@ for ii in range(nUniqueConditions):
 #        msd1.computeSqDisp(save = False, load = True)
         msd1.computeMSD(save = True, overwrite = False)
 
-        
+# Non-linear least-squares fitting Including Correlated Error
+
+msd1.fitTrajectories(overwrite = False)
+
+# MSD plots
+
+msd1.plotMSD(figname = 1, plot_fit= True, savefig = True)
+
+msd1.plotLocalSlope(savefig = True)
         
         
     
