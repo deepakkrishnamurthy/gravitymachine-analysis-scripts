@@ -18,4 +18,4 @@ from matplotlib import rc
 rc('font', family='sans-serif') 
 rc('font', serif='Helvetica') 
 rc('text', usetex='false') 
-rcParams.update({'font.size': 24})
+rcParams.update({'font.size': 32})

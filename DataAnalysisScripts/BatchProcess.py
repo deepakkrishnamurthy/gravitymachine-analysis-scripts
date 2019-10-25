@@ -15,34 +15,41 @@ import matplotlib.pyplot as plt
 # get_ipython().run_line_magic('matplotlib', 'qt')
 # For inline plot
 #get_ipython().run_line_magic('matplotlib', 'inline')
-from tkinter import filedialog
 import pandas as pd
 import os, time
 
-batch_file = "C:/Users/Hongquan/Documents/BatchFile.csv"
+batch_file = "C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/BatchProcess.csv"
 
 df_batch = pd.read_csv(batch_file)
+
+print(df_batch)
 
 for ii in range(len(df_batch)):
     
     Tmin = df_batch['Tmin'][ii]
     Tmax = df_batch['Tmax'][ii]
-    FileName = df_batch['FileName'][ii]
+    
+    rootFolder = df_batch['rootFolder'][ii]
+    trackFolder = df_batch['trackFolder'][ii]
+    trackFile = df_batch['trackFile'][ii]
+    
+    FileName = os.path.join(rootFolder, trackFolder, trackFile)
+    
     Organism = df_batch['Organism'][ii]
     Condition = df_batch['Condition'][ii]
-    Size = df_batch['Size'][ii]
+   
     
     LocalTime = time.ctime(os.path.getmtime(FileName))
     
-    TrackDescription = df_batch['Track description'][ii]
+    
+
     
     print(Tmin)
     print(Tmax)
     print(FileName)
     print(Organism)
     print(Condition)
-    print(Size)
-    track = GravityMachineTrack.gravMachineTrack(fileName = FileName, organism = Organism, condition = Condition, Tmin = Tmin, Tmax = Tmax, computeDisp = True, orgDim = Size, overwrite_piv=False, overwrite_velocity=False, localTime = LocalTime, trackDescription = TrackDescription)
+    track = GravityMachineTrack.gravMachineTrack(trackFile = FileName, organism = Organism, condition = Condition, Tmin = Tmin, Tmax = Tmax, computeDisp = True, overwrite_piv = False, overwrite_velocity = False, findDims = True, localTime = LocalTime, flip_z=True, pixelPermm = 1122.67, scaleFactor = 10)
 #
     track.saveAnalysisData(overwrite = True)
 

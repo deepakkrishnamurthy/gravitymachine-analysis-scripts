@@ -43,7 +43,7 @@ def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label = None):
 
 class gravMachineTrack:
 
-    def __init__(self, trackFile = None, organism = 'Plankton', condition = 'Control', Tmin=0, Tmax=0, frame_min = None, frame_max = None, indexing = 'time', computeDisp = False, findDims = False, orgDim = None, overwrite_piv = False, overwrite_velocity = False, scaleFactor = 20, localTime = 0, trackDescription = 'Normal', pixelPermm = None):
+    def __init__(self, trackFile = None, organism = 'Plankton', condition = 'Control', Tmin=0, Tmax=0, frame_min = None, frame_max = None, indexing = 'time', computeDisp = False, findDims = False, orgDim = None, overwrite_piv = False, overwrite_velocity = False, scaleFactor = 20, localTime = 0, trackDescription = 'Normal', pixelPermm = None, flip_z = False, use_postprocessed = False):
         
         self.Organism = organism
         self.Condition = condition
@@ -54,6 +54,10 @@ class gravMachineTrack:
 
         # Total duration of track in seconds
         self.trackDuration = None
+        
+        # Whether to use post-processed dataset
+        self.use_postprocessed = use_postprocessed
+        
         
         # Description of track (such as observed cell/organism state). Warning: This may be subjective. Mainly as a book-keeping utility
         self.track_desc = trackDescription
@@ -109,6 +113,19 @@ class gravMachineTrack:
                 self.XobjImage_name = 'Xobj_image'
                 # Z position relative to image center
                 self.Zobj_name = 'Zobjet'
+                
+            
+            if(self.use_postprocessed):
+                self.Xobj_name = 'Xobj'
+                # Y position of object (wrt lab)
+                self.Yobj_name = 'Yobj'
+
+                
+            if self.XobjImage_name in self.ColumnNames:
+                self.XposImageAvailable = True
+            else:
+                self.XposImageAvailable = False
+                
 
             
             
@@ -162,6 +179,9 @@ class gravMachineTrack:
             
             self.df['ZobjWheel'] = self.df['ZobjWheel'] - self.df['ZobjWheel'][0]
             
+            if(flip_z is True):
+                self.df['ZobjWheel'] = -self.df['ZobjWheel'] 
+            
             self.trackLen = len(self.df)
             
             # Find the average sampling frequency
@@ -172,10 +192,13 @@ class gravMachineTrack:
             #Sampling Interval
             self.dT = self.T[1]-self.T[0]
             self.samplingFreq = 1/float(self.dT)
+            
+            print('Sampling frequency: {}'.format(self.samplingFreq))
             # Window to use for smoothing data. 
             # IMPORTANT: We only keep variations 10 times slower that the frame rate of data capture.
             self.window_time = 10*self.dT
             
+#            if(not self.use_postprocessed):
             self.interp_positions()
             self.computeVelocity()
             self.computeAccln()
@@ -195,6 +218,7 @@ class gravMachineTrack:
                     self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
                 else:
                     self.pixelPermm = pixelPermm*(self.imW/1920)
+                   
 
 
                 print('Pixel per mm : {}'.format(self.pixelPermm))
@@ -220,16 +244,45 @@ class gravMachineTrack:
                 self.OrgDim = orgDim
             
            #  If the compute Displacement flag is True then calculate the true displacement using the PIV based velocities
-            if(computeDisp):
+            if(computeDisp and not self.use_postprocessed):
                 self.FluidVelocitySaveFile = 'fluidVelocityTimeSeries_{}_{}.pkl'.format(self.Tmin, self.Tmax)
                 self.FluidVelocitySavePath = os.path.join(self.path, self.FluidVelocitySaveFile)
-                self.correctedDispVelocity(overwrite_flag=self.overwrite_velocity)
+                self.correctedDispVelocity(overwrite_flag = self.overwrite_velocity)
         
     def initializeTrack(self):
         self.T = None
         self.X = None
         self.Y = None
         self.ZobjWheel = None
+        
+    def initCVtrackers(self):
+        
+        major_ver, minor_ver, subminor_ver = cv2.__version__.split('.')
+        
+#        tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+        tracker_type = 'CSRT'
+        print('Using tracker: {}'.format(tracker_type))
+ 
+        if int(minor_ver) < 3:
+            self.tracker = cv2.Tracker_create(tracker_type)
+        else:
+            if tracker_type == 'BOOSTING':
+                self.tracker = cv2.TrackerBoosting_create()
+            if tracker_type == 'MIL':
+                self.tracker = cv2.TrackerMIL_create()
+            if tracker_type == 'KCF':
+                self.tracker = cv2.TrackerKCF_create()
+            if tracker_type == 'TLD':
+                self.tracker = cv2.TrackerTLD_create()
+            if tracker_type == 'MEDIANFLOW':
+                self.tracker = cv2.TrackerMedianFlow_create()
+            if tracker_type == 'GOTURN':
+                self.tracker = cv2.TrackerGOTURN_create()
+            if tracker_type == 'MOSSE':
+                self.tracker = cv2.TrackerMOSSE_create()
+            if tracker_type == "CSRT":
+                self.tracker = cv2.TrackerCSRT_create()
+            
         
     def openFile(self, fileName = None):
         
@@ -245,7 +298,7 @@ class gravMachineTrack:
 
             # self.path contains the absolute path to the track file folder
             self.path, self.trackFile = os.path.split(fileName) 
-            self.trackFolder, *rest = os.path.split(self.path)       
+            self.trackFolder, self.trackName = os.path.split(self.path)       
     #        self.path = QtGui.QFileDialog.getExistingDirectory(None, "Open dataset folder")
             
             # File name for saving the analyzed data
@@ -296,14 +349,14 @@ class gravMachineTrack:
     def saveAnalysisData(self, overwrite = True):
 
         if(overwrite or os.path.exists(self.analysis_save_path)==False):
-            self.df_analysis = pd.DataFrame({'Organism':[],'Condition':[],'Size':[],'Local time':[],'Track description':[],'Time':[], 'Image name':[], 'Xpos_raw':[],'Ypos_raw':[],'Zpos_raw':[],'Xpos':[],'Zpos':[],'Xvel':[],'Yvel':[],'Zvel':[]})
+            self.df_analysis = pd.DataFrame({'Organism':[],'Condition':[],'Size':[],'Local time':[],'Track description':[],'Time':[], 'Image name':[], 'Xpos_raw':[],'Zpos_raw':[],'Xobj':[],'Yobj':[],'ZobjWheel':[],'Xvel':[],'Yvel':[],'Zvel':[]})
             
             analysis_len = len(self.imageIndex_array)
             
             print('Local time {}'.format(self.localTime))
             print('Track description {}'.format(self.track_desc))
 
-            self.df_analysis = self.df_analysis.append(pd.DataFrame({'Organism':np.repeat(self.Organism,analysis_len,axis = 0),'Condition':np.repeat(self.Condition,analysis_len,axis = 0),'Size': np.repeat(self.OrgDim,analysis_len,axis = 0),'Local time':np.repeat(self.localTime,analysis_len, axis = 0),'Track description':np.repeat(self.track_desc, analysis_len, axis=0),'Time':self.df['Time'][self.imageIndex_array], 'Image name':self.df['Image name'][self.imageIndex_array], 'Xpos_raw':self.df['Xobj'][self.imageIndex_array],'Ypos_raw':self.df['Yobj'][self.imageIndex_array],'Zpos_raw':self.df['ZobjWheel'][self.imageIndex_array],'Xpos':self.df['Xobj'][self.imageIndex_array],'Zpos':self.Z_objFluid,'Xvel':self.Vx[self.imageIndex_array],'Yvel':self.Vy[self.imageIndex_array],'Zvel':self.Vz_objFluid}))
+            self.df_analysis = self.df_analysis.append(pd.DataFrame({'Organism':np.repeat(self.Organism,analysis_len,axis = 0),'Condition':np.repeat(self.Condition,analysis_len,axis = 0),'Size': np.repeat(self.OrgDim,analysis_len,axis = 0),'Local time':np.repeat(self.localTime,analysis_len, axis = 0),'Track description':np.repeat(self.track_desc, analysis_len, axis=0),'Time':self.df['Time'][self.imageIndex_array], 'Image name':self.df['Image name'][self.imageIndex_array], 'Xpos_raw':self.df['Xobj'][self.imageIndex_array],'Zpos_raw':self.df['ZobjWheel'][self.imageIndex_array],'Xobj':self.X_objFluid,'Yobj':self.df['Yobj'][self.imageIndex_array], 'ZobjWheel':self.Z_objFluid,'Xvel':self.Vx_objFluid,'Yvel':self.Vy[self.imageIndex_array],'Zvel':self.Vz_objFluid}))
                 
             self.df_analysis.to_csv(self.analysis_save_path)
 
@@ -448,9 +501,9 @@ class gravMachineTrack:
             #     OrgDim_mean, OrgMajDim_mean, OrgMinDim_mean = pickle.load(f)
             size_df = pd.read_csv(os.path.join(self.path,saveFile))
         
-            self.OrgDim = size_df['OrgDim']
-            self.OrgMajDim = size_df['OrgMajDim']
-            self.OrgMinDim = size_df['OrgMinDim']
+            self.OrgDim = size_df['OrgDim'][0]
+            self.OrgMajDim = size_df['OrgMajDim'][0]
+            self.OrgMinDim = size_df['OrgMinDim'][0]
             
         print('*'*50)
         print('Organism dimension {} mm'.format(self.OrgDim))
@@ -554,8 +607,13 @@ class gravMachineTrack:
                 self.Vz[i] = (self.df['ZobjWheel'][i+1]-self.df['ZobjWheel'][i])/(self.df['Time'][i+1]-self.df['Time'][i])
                 
                 self.Vz_objLab[i] = (self.df[self.Zobj_name][i+1]-self.df[self.Zobj_name][i])/(self.df['Time'][i+1]-self.df['Time'][i])
-
+                
                 self.Theta_dot[i] = (self.df['ThetaWheel'][i+1]-self.df['ThetaWheel'][i])/(self.df['Time'][i+1]-self.df['Time'][i])
+
+                
+                if self.XposImageAvailable:
+                    self.Vx_objStage[i] = (self.df[self.XobjImage_name][i+1]-self.df[self.XobjImage_name][i])/(self.df['Time'][i+1]-self.df['Time'][i])
+                
 
             
             elif(i==self.trackLen-1):
@@ -565,9 +623,13 @@ class gravMachineTrack:
                 self.Vz[i] = (self.df['ZobjWheel'][i]-self.df['ZobjWheel'][i-1])/(self.df['Time'][i]-self.df['Time'][i-1])
                 
                 self.Vz_objLab[i] = (self.df[self.Zobj_name][i]-self.df[self.Zobj_name][i-1])/(self.df['Time'][i]-self.df['Time'][i-1])
-
+                
                 self.Theta_dot[i] = (self.df['ThetaWheel'][i]-self.df['ThetaWheel'][i-1])/(self.df['Time'][i]-self.df['Time'][i-1])
 
+                if self.XposImageAvailable:
+                    self.Vx_objStage[i] = (self.df[self.XobjImage_name][i]-self.df[self.XobjImage_name][i-1])/(self.df['Time'][i]-self.df['Time'][i-1])
+               
+        
                 
             else:
                 # Central difference for all other points
@@ -576,29 +638,45 @@ class gravMachineTrack:
                 self.Vz[i] = (self.df['ZobjWheel'][i+1]-self.df['ZobjWheel'][i-1])/(self.df['Time'][i+1]-self.df['Time'][i-1])
                 
                 self.Vz_objLab[i] = (self.df[self.Zobj_name][i+1]-self.df[self.Zobj_name][i-1])/(self.df['Time'][i+1]-self.df['Time'][i-1])
-
+                
+                
                 self.Theta_dot[i] = (self.df['ThetaWheel'][i+1]-self.df['ThetaWheel'][i-1])/(self.df['Time'][i+1]-self.df['Time'][i-1])
+
+                if self.XposImageAvailable:
+                    self.Vx_objStage[i] = (self.df[self.XobjImage_name][i + 1]-self.df[self.XobjImage_name][i-1])/(self.df['Time'][i+1]-self.df['Time'][i-1])
+             
 
 
 
     def computeVelocity(self):
+        
         self.Vx = np.zeros(self.trackLen)
         self.Vy = np.zeros(self.trackLen)
         self.Vz = np.zeros(self.trackLen)
         self.Vz_objLab = np.zeros(self.trackLen)
+        # Velocity of the object in the reference frame of the X-stage
+        self.Vx_objStage = np.zeros(self.trackLen)
         self.Theta_dot = np.zeros(self.trackLen)
         
-        # Try to calculate the velocities
-        self.velocity_central_diff()
+        # If using post-procssed data, then load velocities from file
+        if(self.use_postprocessed):
+            self.Vx = self.df['Xvel']
+            self.Vy = self.df['Yvel']
+            self.Vz = self.df['Zvel']
+            
+            
+        else:
+            # Try to calculate the velocities
+            self.velocity_central_diff()
             
         # Smooth the velocity data to only keep frequencies 10 times lower than the sampling frequency (low-pass filter)
-        self.Vx = self.smoothSignal(self.Vx, window_time = self.window_time)
-        self.Vy = self.smoothSignal(self.Vy, window_time = self.window_time)
-        self.Vz = self.smoothSignal(self.Vz, window_time = self.window_time)
-        self.Vz_objLab = self.smoothSignal(self.Vz_objLab, window_time = self.window_time)
-        self.Theta_dot= self.smoothSignal(self.Theta_dot, window_time = self.window_time)
-        self.Speed = (self.Vx**2 + self.Vy**2 + self.Vz**2)**(1/2)
-        self.Speed_z = (self.Vz**2)**(1/2)
+        self.Vx_smooth = self.smoothSignal(self.Vx, window_time = self.window_time)
+        self.Vy_smooth = self.smoothSignal(self.Vy, window_time = self.window_time)
+        self.Vz_smooth = self.smoothSignal(self.Vz, window_time = self.window_time)
+        self.Vz_objLab_smooth = self.smoothSignal(self.Vz_objLab, window_time = self.window_time)
+        self.Theta_dot_smooth = self.smoothSignal(self.Theta_dot, window_time = self.window_time)
+        self.Speed = (self.Vx_smooth**2 + self.Vy_smooth**2 + self.Vz_smooth**2)**(1/2)
+        self.Speed_z = (self.Vz_smooth**2)**(1/2)
         
     
     def computeAccln(self):
@@ -645,13 +723,24 @@ class gravMachineTrack:
     def computeFluidVelocity(self, image_a, image_b, deltaT = 1, overwrite_piv = False, overwrite_velocity = False, masking = False, obj_position = None, obj_size = 0.1):
         # Computes the mean fluid velocity, far away from objects, given a pair of images
                 
+    
         #--------------------------------------------------------------------------
         # Load the frame-pair into memory
         #--------------------------------------------------------------------------
         frame_a_color = cv2.imread(os.path.join(self.path, self.image_dict[image_a], image_a))
         frame_b_color = cv2.imread(os.path.join(self.path, self.image_dict[image_b], image_b))
+    
         
-        frame_a_gs = cv2.cvtColor(frame_a_color,cv2.COLOR_BGR2GRAY)
+       
+        
+        # Plot the object's position on the image to verify it is correct
+#        print('Circle diameter: {}'.format(int(2*self.scaleFactor*self.OrgDim*self.pixelPermm)))
+#        frame_a_color_copy = np.copy(frame_a_color)
+#        
+#        cv2.circle(frame_a_color_copy, (int(obj_position[0]), int(obj_position[1])), int(self.OrgDim*self.pixelPermm*self.scaleFactor), [255,255,255])
+#        
+#        cv2.imshow('Frame', frame_a_color_copy)
+#        cv2.waitKey(1)
 
         #--------------------------------------------------------------------------
         # Perform the PIV computation
@@ -663,9 +752,12 @@ class gravMachineTrack:
             print('-'*50)
             print('Analyzing Frame pairs: {} and {} \n'.format(image_a,image_b))
             print('-'*50)
-            x,y,u,v, sig2noise = PIV_Functions.doPIV(frame_a_color,frame_b_color, dT = deltaT, win_size = self.window_size, overlap = self.overlap, searchArea = self.searchArea)
+            x,y,u,v, sig2noise = PIV_Functions.doPIV(frame_a_color,frame_b_color, dT = deltaT, win_size = self.window_size, overlap = self.overlap, searchArea = self.searchArea, apply_clahe = False)
             
-            u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min=1.5, smoothing_param = 0)
+            
+            
+#            u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.2, smoothing_param = 0)
+            
             
             
             u,v = (PIV_Functions.data2RealUnits(data = u,scale = 1/(self.pixelPermm)), PIV_Functions.data2RealUnits(data = v,scale = 1/(self.pixelPermm)))
@@ -687,10 +779,11 @@ class gravMachineTrack:
             # Read the PIV data 
             #--------------------------------------------------------------------------
             print('-'*50)
-            print('Loading: {} and {} \n'.format(image_a,image_b))
+            print('Loading PIV data for: {} and {} \n'.format(image_a,image_b))
             print('-'*50)
             pklFile = saveFile
             x,y,u,v,Contours = PIV_Functions.readPIVdata(pklFile)
+            print(np.nanmean(u+v))
            
         
         
@@ -726,7 +819,16 @@ class gravMachineTrack:
                 radius = round((self.OrgDim/2.0)*self.pixelPermm)
                 
             maskInsideCircle = PIV_Functions.pointInCircle(x,y,x_cent,y_cent,self.scaleFactor*radius)
-            u_farfield, v_farfield = (u[~maskInsideCircle], v[~maskInsideCircle])
+
+            u[maskInsideCircle] = np.nan
+            v[maskInsideCircle] = np.nan 
+                
+            
+#            assert(np.nanmean(u+v) is not np.nan)
+            # Plot the vectors
+#            PIV_Functions.plotPIVdata(frame_a_color, x, y, u, v)
+            
+            
             
 #            print(x_cent, y_cent)
 #            print(radius)
@@ -746,11 +848,11 @@ class gravMachineTrack:
 #            cv2.waitKey(1)
        
         else:
-            u_farfield, v_farfield = (u, v)
+            pass
             
         # Find the mean velocity
-        u_avg, v_avg = (np.nanmean(u_farfield), np.nanmean(v_farfield))
-        u_std, v_std = (np.nanstd(u_farfield), np.nanstd(v_farfield))
+        u_avg, v_avg = (np.nanmean(u), np.nanmean(v))
+        u_std, v_std = (np.nanstd(u), np.nanstd(v))
         
         
         return u_avg, v_avg, u_std, v_std
@@ -782,14 +884,17 @@ class gravMachineTrack:
             for ii in range(n):
                 
                
-                    
+                                    
                 imageindex_a = self.imageIndex[ii] 
                 imageindex_b = self.imageIndex[ii + 1]
                 
                 image_a = self.df['Image name'][imageindex_a]
                 image_b = self.df['Image name'][imageindex_b]
                 
-                obj_position = (self.imW/2, self.imH/2 - round(self.df['Zobj'][imageindex_a]*self.pixelPermm))
+                try:
+                    obj_position = (self.imW/2 - round(self.df['Xobj_image'][imageindex_a]*self.pixelPermm), self.imH/2 - round(self.df['Zobj'][imageindex_a]*self.pixelPermm))
+                except:
+                    obj_position = (self.imW/2, self.imH/2 - round(self.df['Zobj'][imageindex_a]*self.pixelPermm))
                 
                 
                 # First check if both these images exist in memory
@@ -846,19 +951,21 @@ class gravMachineTrack:
 
         image_a = None
         
-        imageName = self.df['Image name'][self.imageIndex[0]]
+        if(not os.path.exists(os.path.join(self.root, saveFile)) or overwrite):
+            # If a color threshold does not exist on file then display an image and allow the user to choose the thresholds
+            
+            
         
-        image_a = cv2.imread(os.path.join(self.path,self.image_dict[imageName],imageName))
-        
-      
-        self.imH, self.imW, *rest = np.shape(image_a)
+            imageName = self.df['Image name'][self.imageIndex[0]]
+            
+            image_a = cv2.imread(os.path.join(self.path,self.image_dict[imageName],imageName))
+            
+          
+            self.imH, self.imW, *rest = np.shape(image_a)
     
             
         
-        print('Image Width: {} px \n Image Height: {} px'.format(self.imW, self.imH))
-        
-        if(not os.path.exists(os.path.join(self.root, saveFile)) or overwrite):
-            # If a color threshold does not exist on file then display an image and allow the user to choose the thresholds
+            print('Image Width: {} px \n Image Height: {} px'.format(self.imW, self.imH))
             
             print(os.path.join(self.path, self.image_dict[imageName],imageName))
             v1_min,v2_min,v3_min,v1_max,v2_max,v3_max = rangeslider_functions.getColorThreshold(os.path.join(self.path,self.image_dict[imageName],imageName))
@@ -895,7 +1002,20 @@ class gravMachineTrack:
         
         self.Z_objFluid =  self.computeDisplacement(x_data = self.df['Time'][self.imageIndex_array], y_data = self.Vz_objFluid)
       
+        # Correcting X-velocity
+        
+        if(self.XposImageAvailable):
+            self.Vx_objFluid = self.Vx_objStage[self.imageIndex_array] - self.u_avg_array
+        
+            self.X_objFluid =  self.computeDisplacement(x_data = self.df['Time'][self.imageIndex_array], y_data = self.Vx_objFluid)    
+        else:
+            # If this PIV coorection data is not available then we use the raw data
+            self.X_objFluid = self.Vx[self.imageIndex_array]
+            
 
+        
+        
+        
     #--------------------------------------------------------------------------       
     # Signal Processing Functions
     #--------------------------------------------------------------------------       

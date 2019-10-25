@@ -146,10 +146,16 @@ def pointInCircle(x,y,x_cent,y_cent,radius):
 #==============================================================================
 # PIV Analysis
 #==============================================================================
-def doPIV(frame_a_color,frame_b_color, dT = 1.0, win_size = 64, overlap = 32, searchArea = 64):
+def doPIV(frame_a_color,frame_b_color, dT = 1.0, win_size = 64, overlap = 32, searchArea = 64, apply_clahe = False):
        
     frame_a = cv2.cvtColor(frame_a_color , cv2.COLOR_BGR2GRAY)
     frame_b = cv2.cvtColor(frame_b_color , cv2.COLOR_BGR2GRAY)
+    
+    if(apply_clahe is True):
+    
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(12,12))
+        frame_a = clahe.apply(frame_a)
+        frame_b = clahe.apply(frame_b)
 
     u, v, sig2noise = openpiv.process.extended_search_area_piv( frame_a.astype(np.int32), frame_b.astype(np.int32), window_size = win_size, overlap = overlap, dt = dT, search_area_size = searchArea, sig2noise_method='peak2peak' )
     
