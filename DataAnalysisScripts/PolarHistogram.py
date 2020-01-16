@@ -2,6 +2,8 @@
 """
 Created on Mon Sep 23 16:28:46 2019
 
+Plots the velocity orientations of a 3D track as a polar histogram.
+
 @author: Deepak
 """
 
