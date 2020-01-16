@@ -106,3 +106,10 @@ venv.bak/
 
 # mac 
 .DS_Store
+
+# images
+.png
+.svg
+.tiff
+.tif
+.jpg

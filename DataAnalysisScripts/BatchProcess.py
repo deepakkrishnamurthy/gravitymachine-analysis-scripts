@@ -3,6 +3,8 @@
 """
 Created on Fri Feb  8 11:55:48 2019
 
+Script to serially analyse gravity machine track files.
+
 @author: deepak
 """
 import imp
@@ -10,11 +12,6 @@ import GravityMachineTrack
 imp.reload(GravityMachineTrack)
 import numpy as np
 import matplotlib.pyplot as plt
-# from IPython import get_ipython
-# For plots in a separate window
-# get_ipython().run_line_magic('matplotlib', 'qt')
-# For inline plot
-#get_ipython().run_line_magic('matplotlib', 'inline')
 import pandas as pd
 import os, time
 
