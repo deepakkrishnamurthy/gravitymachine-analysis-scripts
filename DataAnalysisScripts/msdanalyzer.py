@@ -19,6 +19,7 @@ from wlsice.python import wlsice as wlsice
 # imp.reload(wlsice)
 import seaborn as sns
 from pyentrp import entropy as ent
+import math
 
 def squaredDisp(data):
     
@@ -810,7 +811,8 @@ class msdanalyzer:
                 # Save the time the first time around
                 if(counter==0):
                     TimeArray.append(Time)
-
+                    
+                print(len(data['trajectories_x']))
                 Traj_X[counter].append(data['trajectories_x'])
                 Traj_Z[counter].append(data['trajectories_z'])
 
@@ -999,7 +1001,7 @@ class msdanalyzer:
             # Save the resulting fit parameters in a file
 
             # params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'OrgSize_mean':[self.OrgSize_mean], 'OrgSize_std':[self.OrgSize_std], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z], 'MSD_Slope_Z':[self.slope_asymp_Z], 'MSD_Slope_Z_sigma':[self.slope_asymp_Z_sigma], 'MSD_Slope_X':[self.slope_asymp_X], 'MSD_Slope_X_sigma':[self.slope_asymp_X_sigma], 'Vx_variability_mean':[self.Vx_variability_mean], 'Vx_variability_std':[self.Vx_variability_std], 'Vz_variability_mean':[self.Vz_variability_mean], 'Vz_variability_std':[self.Vz_variability_std]})
-            params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'OrgSize_mean':[self.OrgSize_mean], 'OrgSize_std':[self.OrgSize_std], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z], 'MSD_Slope_Z':[self.slope_asymp_Z], 'MSD_Slope_Z_sigma':[self.slope_asymp_Z_sigma], 'MSD_Slope_X':[self.slope_asymp_X], 'MSD_Slope_X_sigma':[self.slope_asymp_X_sigma], 'Vx_mean':[self.Vx_mean], 'Vx_std':[self.Vx_std], 'Vz_mean':[self.Vz_mean], 'Vz_std':[self.Vz_std]})
+            params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'OrgSize_mean':[self.OrgSize_mean], 'OrgSize_std':[self.OrgSize_std], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z], 'coeff_det_x':[self.coeff_det_X], 'coeff_det_z':[self.coeff_det_Z],  'MSD_Slope_Z':[self.slope_asymp_Z], 'MSD_Slope_Z_sigma':[self.slope_asymp_Z_sigma], 'MSD_Slope_X':[self.slope_asymp_X], 'MSD_Slope_X_sigma':[self.slope_asymp_X_sigma], 'Vx_mean':[self.Vx_mean], 'Vx_std':[self.Vx_std], 'Vz_mean':[self.Vz_mean], 'Vz_std':[self.Vz_std]})
 
             params_df.to_csv(os.path.join(self.fittingFolder, saveFile))
 
@@ -1041,7 +1043,6 @@ class msdanalyzer:
         saveFile = self.saveFile + '_' + '_VelocityTimeSeries.csv'
 
         
-
         overwrite = True
 
         if(not os.path.exists(os.path.join(self.velocityDistFolder, saveFile)) or overwrite is True):
@@ -1078,9 +1079,16 @@ class msdanalyzer:
                 
             
 #
-                Velocities_X = np.array(currTrack.Vx)
-                Velocities_Y = np.array(currTrack.Vy)
-                Velocities_Z = np.array(currTrack.Vz)
+#                Velocities_X = np.array(currTrack.Vx)
+#                Velocities_Y = np.array(currTrack.Vy)
+#                Velocities_Z = np.array(currTrack.Vz)
+                
+    
+                
+                Velocities_X = np.array(currTrack.Vx_smooth)
+                Velocities_Y = np.array(currTrack.Vy_smooth)
+                Velocities_Z = np.array(currTrack.Vz_smooth)
+                
                 dataLen = len(Velocities_X)
 
                 Vx_mean[ii] = np.nanmean(Velocities_X)
@@ -1104,6 +1112,9 @@ class msdanalyzer:
             
             print(Vz_mean)
             print(Vz_std)
+            
+            print(Vx_mean)
+            print(Vx_std)
             print('Mean and Std of variability across different tracks: {} +- {}'.format(self.Vz_variability_mean, self.Vz_variability_std))
 
 
@@ -1127,6 +1138,8 @@ class msdanalyzer:
             print('Velocity Z: {} +- {}'.format(self.Vz_mean, self.Vz_std))
             print('Velocity X: {} +- {}'.format(self.Vx_mean, self.Vx_std))
             
+
+            
     def polarHistogram(self):
         
         # First calculate the velocity time-series or load from memory
@@ -1134,15 +1147,48 @@ class msdanalyzer:
             self.calculate_velocityDist()
             
         Vx = self.velocities_df['VelocityX']
+        Vy = self.velocities_df['VelocityY']
         Vz = self.velocities_df['VelocityZ']
         
-        vector_magnitude = (Vx**2 + Vz**2)**(1/2)
+        vector_magnitude = (Vx**2 + Vy**2 + Vz**2)**(1/2)
         
-        Orientation_vectors = np.zeros((2, len(Vx)))
+        Orientation_vectors = np.zeros((3, len(Vx)))
         
         Orientation_vectors[0,:] = Vx/vector_magnitude
-        Orientation_vectors[1,:] = Vz/vector_magnitude
+        Orientation_vectors[1,:] = Vy/vector_magnitude
+        Orientation_vectors[2,:] = Vz/vector_magnitude
         
+        # Extract the orientation angle from the vertical
+        
+        Z_gravity = [0, 0, 1]
+        
+        cos_theta = Orientation_vectors[0,:]*Z_gravity[0] + Orientation_vectors[1,:]*Z_gravity[1] + Orientation_vectors[2,:]*Z_gravity[2]
+
+        # Theta value in degrees
+        theta_array = np.arccos(cos_theta)*(180/(np.pi))
+        
+        
+        # Plot a polar histogram of the angles
+        
+        bin_size = 10
+        
+        a , b = np.histogram(theta_array, bins=np.arange(0, 180 + bin_size, bin_size), density = True)
+        
+        centers = np.deg2rad(np.ediff1d(b)//2 + b[:-1])
+        
+        
+        plt.figure()
+        plt.hist(theta_array, density=True, color = 'b')
+        plt.xlabel('Theta in degrees')
+        plt.show()
+        
+        
+        fig = plt.figure(figsize=(10,8))
+        ax = fig.add_subplot(111, projection='polar')
+        ax.bar(centers, a, width=np.deg2rad(bin_size), bottom=0.0, color='b', edgecolor='k')
+        ax.set_theta_zero_location("N")
+        ax.set_theta_direction(-1)
+        plt.show()
         
         
         

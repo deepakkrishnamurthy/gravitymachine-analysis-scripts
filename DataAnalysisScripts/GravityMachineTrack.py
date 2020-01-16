@@ -8,7 +8,6 @@ Created on Fri Feb  1 01:04:22 2019
 import matplotlib.pyplot as plt
 import os
 import scipy
-from roipoly import roipoly
 import pickle
 plt.close("all")
 import numpy as np
@@ -18,15 +17,11 @@ import cv2
 
 import scipy.interpolate as interpolate
 
-# For file-dialogs
-import tkinter as tk
-from tkinter import filedialog
 from scipy.ndimage.filters import uniform_filter1d
 import imageprocessing.imageprocessing_utils as ImageProcessing
 
 import PIVanalysis.PIV_Functions as PIV_Functions
-import keyboard
-import random
+
 
 def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label = None):
     ax = ax if ax is not None else plt.gca()
@@ -126,7 +121,12 @@ class gravMachineTrack:
             else:
                 self.XposImageAvailable = False
                 
-
+                
+            if 'Light Experiment' in self.ColumnNames:
+                self.LightExperiment = self.df['Light Experiment']
+                
+            if 'LED_Intensity' in self.ColumnNames:
+                self.LED_intensity = self.df['LED_Intensity']
             
             
             # Make T=0 as the start of the track
@@ -176,6 +176,7 @@ class gravMachineTrack:
         
             self.df = self.df.set_index(df_index)
             
+            self.Time = self.df['Time']
             
             self.df['ZobjWheel'] = self.df['ZobjWheel'] - self.df['ZobjWheel'][0]
             
@@ -209,9 +210,9 @@ class gravMachineTrack:
                 
         #        self.setColorThresholds()
                 # PIV parameters
-                self.window_size = 128
-                self.overlap = 64
-                self.searchArea = 128
+                self.window_size = 64
+                self.overlap = 32
+                self.searchArea = 64
                 
                 print('Image height, Image width: {}, {}'.format(self.imH, self.imW))
                 if(pixelPermm is None):
@@ -355,8 +356,33 @@ class gravMachineTrack:
             
             print('Local time {}'.format(self.localTime))
             print('Track description {}'.format(self.track_desc))
-
-            self.df_analysis = self.df_analysis.append(pd.DataFrame({'Organism':np.repeat(self.Organism,analysis_len,axis = 0),'Condition':np.repeat(self.Condition,analysis_len,axis = 0),'Size': np.repeat(self.OrgDim,analysis_len,axis = 0),'Local time':np.repeat(self.localTime,analysis_len, axis = 0),'Track description':np.repeat(self.track_desc, analysis_len, axis=0),'Time':self.df['Time'][self.imageIndex_array], 'Image name':self.df['Image name'][self.imageIndex_array], 'Xpos_raw':self.df['Xobj'][self.imageIndex_array],'Zpos_raw':self.df['ZobjWheel'][self.imageIndex_array],'Xobj':self.X_objFluid,'Yobj':self.df['Yobj'][self.imageIndex_array], 'ZobjWheel':self.Z_objFluid,'Xvel':self.Vx_objFluid,'Yvel':self.Vy[self.imageIndex_array],'Zvel':self.Vz_objFluid}))
+            
+            try:
+                self.df_analysis = self.df_analysis.append(pd.DataFrame({'Organism':np.repeat(self.Organism,analysis_len,axis = 0),
+                                                                         'Condition':np.repeat(self.Condition,analysis_len,axis = 0),
+                                                                         'Size': np.repeat(self.OrgDim,analysis_len,axis = 0),
+                                                                         'Local time':np.repeat(self.localTime,analysis_len, axis = 0),
+                                                                         'Track description':np.repeat(self.track_desc, analysis_len, axis=0),
+                                                                         'Time':self.df['Time'][self.imageIndex_array], 
+                                                                         'Image name':self.df['Image name'][self.imageIndex_array], 
+                                                                         'Xpos_raw':self.df['Xobj'][self.imageIndex_array],
+                                                                         'Zpos_raw':self.df['ZobjWheel'][self.imageIndex_array],
+                                                                         'Xobj':self.X_objFluid,'Yobj':self.df['Yobj'][self.imageIndex_array], 
+                                                                         'ZobjWheel':self.Z_objFluid,'Xvel':self.Vx_objFluid,
+                                                                         'Yvel':self.Vy[self.imageIndex_array],'Zvel':self.Vz_objFluid}))
+            except:
+                self.df_analysis = self.df_analysis.append(pd.DataFrame({'Organism':np.repeat(self.Organism,analysis_len,axis = 0),
+                                                                         'Condition':np.repeat(self.Condition,analysis_len,axis = 0),
+                                                                         'Size': np.repeat(self.OrgDim,analysis_len,axis = 0),
+                                                                         'Local time':np.repeat(self.localTime,analysis_len, axis = 0),
+                                                                         'Track description':np.repeat(self.track_desc, analysis_len, axis=0),
+                                                                         'Time':self.df['Time'][self.imageIndex_array], 
+                                                                         'Image name':self.df['Image name'][self.imageIndex_array], 
+                                                                         'Xpos_raw':self.df['Xobj'][self.imageIndex_array],
+                                                                         'Zpos_raw':self.df['ZobjWheel'][self.imageIndex_array],
+                                                                         'Xobj':self.X_objFluid,'Yobj':self.df['Yobj'][self.imageIndex_array], 
+                                                                         'ZobjWheel':self.Z_objFluid,'Xvel':self.Vx[self.imageIndex_array],
+                                                                         'Yvel':self.Vy[self.imageIndex_array],'Zvel':self.Vz_objFluid}))
                 
             self.df_analysis.to_csv(self.analysis_save_path)
 
@@ -474,6 +500,13 @@ class gravMachineTrack:
                         roiFlag = True
                     elif(key == ord('c')):
                         self.setColorThresholds(overwrite = True)
+                        
+                        
+                else:
+                    # Select new color thresholds
+                    img_num += 1
+                    key = ord('c')
+                        
 
 
 
@@ -706,7 +739,25 @@ class gravMachineTrack:
         self.a_z = self.smoothSignal(self.a_z, self.window_time)
         self.Theta_ddot = self.smoothSignal(self.Theta_ddot, self.window_time)
 
+    def computeVelocityOrientation(self):
+        
+        
+        vector_magnitude = self.Speed
+        
+        Orientation_vectors = np.zeros((3, len(self.Vx_smooth)))
+        
+        Orientation_vectors[0,:] = self.Vx_smooth/vector_magnitude
+        Orientation_vectors[1,:] = self.Vy_smooth/vector_magnitude
+        Orientation_vectors[2,:] = self.Vz_smooth/vector_magnitude
+        
+        # Extract the orientation angle from the vertical
+        
+        Z_gravity = [0, 0, 1]
+        
+        cos_theta = Orientation_vectors[0,:]*Z_gravity[0] + Orientation_vectors[1,:]*Z_gravity[1] + Orientation_vectors[2,:]*Z_gravity[2]
 
+        # Theta value in degrees
+        self.orientation_theta = np.arccos(cos_theta)*(180/(np.pi))
         
         
         
@@ -756,7 +807,7 @@ class gravMachineTrack:
             
             
             
-#            u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.2, smoothing_param = 0)
+            u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
             
             
             
@@ -808,7 +859,7 @@ class gravMachineTrack:
 
         
         
-#        PIV_Functions.plotPIVdata(frame_a_gs,x,y,u,v, orgContour=Contours)
+#        PIV_Functions.plotPIVdata(frame_a_color,x,y,u,v, orgContour=Contours)
         
         
         if(masking is True):    
@@ -825,8 +876,7 @@ class gravMachineTrack:
                 
             
 #            assert(np.nanmean(u+v) is not np.nan)
-            # Plot the vectors
-#            PIV_Functions.plotPIVdata(frame_a_color, x, y, u, v)
+         
             
             
             
@@ -849,7 +899,9 @@ class gravMachineTrack:
        
         else:
             pass
-            
+          
+           # Plot the vectors
+        PIV_Functions.plotPIVdata(frame_a_color, x, y, u, v)
         # Find the mean velocity
         u_avg, v_avg = (np.nanmean(u), np.nanmean(v))
         u_std, v_std = (np.nanstd(u), np.nanstd(v))
@@ -1011,6 +1063,7 @@ class gravMachineTrack:
         else:
             # If this PIV coorection data is not available then we use the raw data
             self.X_objFluid = self.Vx[self.imageIndex_array]
+            self.Vx_objFluid = None
             
 
         
@@ -1022,7 +1075,7 @@ class gravMachineTrack:
     def smoothSignal(self, data, window_time):      # Window is given in seconds
             
             avgWindow = int(window_time*self.samplingFreq)
-            return uniform_filter1d(data, size = avgWindow, mode="wrap")
+            return uniform_filter1d(data, size = avgWindow, mode="nearest")
 #            data = pd.Series(data)
 #            rolling_mean = np.array(data.rolling(window = avgWindow, center = True).mean())
 ##            try:

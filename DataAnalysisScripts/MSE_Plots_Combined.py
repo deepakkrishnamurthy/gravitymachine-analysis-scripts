@@ -64,7 +64,7 @@ data_file = 'C:/Users/Deepak/Dropbox/GravityMachine/ExperimentResults/CombinedDa
 
 df = pd.read_csv(data_file)
 
-df_larvae = df[df['Organism'].isin(['Acorn worm', 'Starfish', 'Dendraster', 'Sea urchin', 'Sea cucumber', 'Brittletstar'])]
+df_larvae = df[df['Organism'].isin(['Acorn worm', 'Starfish', 'Dendraster', 'Sea urchin', 'Sea cucumber', 'Snail'])]
 
 df_singlecell = df[df['Organism'].isin(['Akashiwo', 'Ceratium_sp_Fork', 'Stentor'])]
 
@@ -74,8 +74,12 @@ print(df_larvae)
 
 plt.figure(figsize=(16,12))
 sns.lineplot(x="Scale factor times", y="MSE_Vz",
-             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 6), linewidth = 2, 
+             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 6), linewidth = 3, 
              data=df_larvae , markersize = 20)
+
+sns.lineplot(x="Scale factor times", y="MSE_noise",
+             hue="Organism", style = 'Organism', markers = False, palette = sns.color_palette("Set2", 1), linewidth = 2, 
+             data = df_larvae[df_larvae['Organism'].isin(['Acorn worm'])])
 ax = plt.gca()
 ax.legend(markerscale=4)
 plt.title('Comparative MSE analysis of larvae')
@@ -83,28 +87,28 @@ plt.savefig('MSEanalysis_combined.svg', dpi = 150)
 plt.savefig('MSEanalysis_combined.png', dpi = 150)
 
 
-plt.figure(figsize=(16,12))
-sns.lineplot(x="Scale factor times", y="MSE_Vz",
-             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 3), linewidth = 3, 
-             data =  df_larvae[df_larvae['Organism'].isin(['Sea urchin', 'Sea cucumber', 'Brittletstar'])], markersize = 20)
-ax = plt.gca()
-ax.legend(markerscale=4)
-plt.ylim([0, 2.0])
-plt.title('Low complexity trajectories')
-plt.savefig('LowComplexityTrajectories.svg', dpi = 150)
-plt.savefig('LowComplexityTrajectories.png', dpi = 150)
-
-
-plt.figure(figsize=(16,12))
-sns.lineplot(x="Scale factor times", y="MSE_Vz",
-             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 3), linewidth = 3, 
-             data =  df_larvae[df_larvae['Organism'].isin(['Acorn worm', 'Starfish', 'Dendraster'])], markersize = 20)
-ax = plt.gca()
-ax.legend(markerscale=4)
-plt.title('High complexity trajectories')
-plt.ylim([0, 2.0])
-plt.savefig('HighComplexityTrajectories.svg', dpi = 150)
-plt.savefig('HighComplexityTrajectories.png', dpi = 150)
+#plt.figure(figsize=(16,12))
+#sns.lineplot(x="Scale factor times", y="MSE_Vz",
+#             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 3), linewidth = 3, 
+#             data =  df_larvae[df_larvae['Organism'].isin(['Sea urchin', 'Sea cucumber', 'Snail'])], markersize = 20)
+#ax = plt.gca()
+#ax.legend(markerscale=4)
+#plt.ylim([0, 2.0])
+#plt.title('Low complexity trajectories')
+#plt.savefig('LowComplexityTrajectories.svg', dpi = 150)
+#plt.savefig('LowComplexityTrajectories.png', dpi = 150)
+#
+#
+#plt.figure(figsize=(16,12))
+#sns.lineplot(x="Scale factor times", y="MSE_Vz",
+#             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 3), linewidth = 3, 
+#             data =  df_larvae[df_larvae['Organism'].isin(['Acorn worm', 'Starfish', 'Dendraster'])], markersize = 20)
+#ax = plt.gca()
+#ax.legend(markerscale=4)
+#plt.title('High complexity trajectories')
+#plt.ylim([0, 2.0])
+#plt.savefig('HighComplexityTrajectories.svg', dpi = 150)
+#plt.savefig('HighComplexityTrajectories.png', dpi = 150)
 
 
 
@@ -112,6 +116,10 @@ plt.figure(figsize=(16,12))
 sns.lineplot(x="Scale factor times", y="MSE_Vz",
              hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 3), linewidth = 3, 
              data =  df_singlecell, markersize = 20)
+
+sns.lineplot(x="Scale factor times", y="MSE_noise",
+             hue="Organism", style = 'Organism', markers = False, palette = sns.color_palette("Set2", 1), linewidth = 2, 
+             data = df_singlecell[df_singlecell['Organism'].isin(['Stentor'])] )
 ax = plt.gca()
 ax.legend(markerscale=4)
 plt.title('Single-cell trajectories')

@@ -45,4 +45,4 @@ ax0 = sns.distplot(df["Zvel"],  kde = True , color = 'b', norm_hist = True, hist
 
 # Blink detection
 
-Z_disp_smooth = 
+#Z_disp_smooth = 

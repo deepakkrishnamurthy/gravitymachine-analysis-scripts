@@ -35,7 +35,8 @@ if(not os.path.exists(saveFolder)):
     os.makedirs(saveFolder)
     
     
-analysis_file = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/Entropy_Analysis_data/Euglena.csv'
+analysis_file = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/Entropy_Analysis_data/Volvox.csv'
+
 
 analysis_df = pd.read_csv(analysis_file)
 

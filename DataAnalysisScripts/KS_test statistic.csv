@@ -1,0 +1,15 @@
+,Organism,Condition,KS test statistic,p-value
+0,Acorn worm,No light,0.2312860251173799,0.0
+0,Akashiwo,Ambient light_Down,0.6925222510337095,0.0
+0,Akashiwo,Ambient light_Up,0.49612913852742546,0.0
+0,Brittlestar,No light,0.2918635365899029,0.0
+0,Ceratium_sp_noFork,Ambient light,0.5994126166720309,0.0
+0,Dendraster,No light,0.3477418179926115,0.0
+0,Euglena,No light,0.9528898582333697,0.0
+0,Polychaete,Day,0.7114726407965507,0.0
+0,Polychate,Night,0.6690818953189056,0.0
+0,Sea cucumber,No light,0.21414294308280452,0.0
+0,Sea urchin,No light,0.7625212855096359,0.0
+0,Snail,No light,0.2943578164656351,0.0
+0,Starfish,No light,0.6972749588697673,0.0
+0,Stentor,No light,0.7727624709614568,0.0

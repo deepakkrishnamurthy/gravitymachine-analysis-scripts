@@ -121,6 +121,7 @@ def pointInContour(x,y,contours):
         for i in range(0,H):
             for j in range(0,W):
                 x_,y_ = (x[i,j],y[i,j])
+
                 dist= cv2.pointPolygonTest(cnts,(x_,y_),False)
                 # Create a mask of points which lie inside the contour
                 if(dist>=0):
@@ -182,18 +183,20 @@ def pivPostProcess(u,v,sig2noise,sig2noise_min=1.5,smoothing_param = 0):
 
 
 def plotPIVdata(image,x,y,u,v, orgContour = None, Centroids = None, pixelPermm = 1,figname=1,show = 0,saveFileName=None):
-    mmPerPixel = 1/pixelPermm
     # Plots the PIV vector field overlaid on the raw image
     imH, imW, *rest = np.shape(image)
     
     
     if(orgContour is not None):
+        print('masking the vector field...')
+        
         maskInside = pointInContour(np.flipud(x),np.flipud(y),orgContour)
+        
         u[maskInside] = np.nan
         v[maskInside] = np.nan
         
-    x, y = (x*mmPerPixel, y*mmPerPixel)
-    
+        print(np.sum(maskInside))
+            
     U = velMag(u,v)
     
     
@@ -205,15 +208,17 @@ def plotPIVdata(image,x,y,u,v, orgContour = None, Centroids = None, pixelPermm =
 
     if(orgContour is not None):        
         cv2.drawContours(image, [orgContour], -1,(255,0,0), 3)
-    ax1 = plt.imshow(image,cmap=plt.cm.gray,alpha=1.0,extent = [0,mmPerPixel*imW,mmPerPixel*imH, 0])
-    ax2 = plt.contourf(x, y, U, cmap = cmocean.cm.amp, alpha=1.0,linewidth=0,linestyle=None)
+    ax1 = plt.imshow(image,cmap=plt.cm.gray,alpha=1.0,extent = [0,imW,imH, 0])
+#    ax2 = plt.contourf(x, y, U, cmap = cmocean.cm.amp, alpha=1.0,linewidth=0,linestyle=None)
 #    
     ax3 = plt.quiver(x,y,u,v,color=[0,1,0,0.8])
 ##    ax3 = plt.quiver(x,y,u,v,color=[0,0,0,1])
+    
+    plt.scatter(x,y,10,'r')
 #
-    cbar = plt.colorbar(ax2)
+#    cbar = plt.colorbar(ax2)
 #
-    cbar.set_label('Flow velocity magnitude (mm/s)')
+#    cbar.set_label('Flow velocity magnitude (mm/s)')
 #
     plt.axis('image')
     

@@ -22,12 +22,13 @@ import matplotlib.pyplot as plt
 # Define some constants for the data analysis:
 
 minTrackDuration = 30
+
     
     
 # Folder in which to save analysis results
 saveFolder = 'C:/Users/deepak/Dropbox/GravityMachine/ExperimentResults/MSD_Analysis'
     
-analysis_file = 'C:/Users/deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/Euglena.csv'
+analysis_file = 'C:/Users/deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/CeratiumSp_noFork.csv'
 
 analysis_df = pd.read_csv(analysis_file)
 
@@ -78,7 +79,7 @@ for ii in range(nUniqueConditions):
             
             print('Loading {}'.format(full_path))
             
-            track = GravityMachineTrack.gravMachineTrack(trackFile = full_path , organism = Track_df['Organism'], condition = Track_df['Condition'], Tmin = Track_df['Tmin'], Tmax = Track_df['Tmax'], findDims = True, pixelPermm = 1122.67, use_postprocessed = True)
+            track = GravityMachineTrack.gravMachineTrack(trackFile = full_path , organism = Track_df['Organism'], condition = Track_df['Condition'], Tmin = Track_df['Tmin'], Tmax = Track_df['Tmax'], findDims = True, pixelPermm = None, use_postprocessed = False)
             
                     
             # Filter tracks based on min Track Duration
@@ -93,7 +94,7 @@ for ii in range(nUniqueConditions):
 
     #    msd1 = msdanalyzer(testFlag=0)
     
-#        msd1.computeSqDisp(save = True)
+        msd1.computeSqDisp(save = True)
         msd1.computeMSD(save = True, overwrite = True)
     
         msd1.calculate_velocityDist()
