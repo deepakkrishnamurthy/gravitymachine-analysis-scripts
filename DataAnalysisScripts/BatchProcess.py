@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os, time
 
-batch_file = "C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/DataAnalysisScripts/batchProcess_Diatoms_2.csv"
+batch_file = "C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/BatchProcessFiles/BoatWobbleAnalysis_PIV.csv"
 
 df_batch = pd.read_csv(batch_file)
 
@@ -48,7 +48,7 @@ for ii in range(len(df_batch)):
     print(FileName)
     print(Organism)
     print(Condition)
-    track = GravityMachineTrack.gravMachineTrack(trackFile = FileName, organism = Organism, condition = Condition, trackDescription = Description, Tmin = Tmin, Tmax = Tmax, computeDisp = True, overwrite_piv = False, overwrite_velocity = False, findDims = True, localTime = LocalTime, flip_z = False, pixelPermm = 314, scaleFactor = 5)
+    track = GravityMachineTrack.gravMachineTrack(trackFile = FileName, organism = Organism, condition = Condition, trackDescription = Description, Tmin = Tmin, Tmax = Tmax, computeDisp = True, overwrite_piv = True, overwrite_velocity = True, findDims = True, localTime = LocalTime, flip_z = False, pixelPermm = 1122.67, scaleFactor = 5)
 #
     track.saveAnalysisData(overwrite = True)
 

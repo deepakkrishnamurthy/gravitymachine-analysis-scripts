@@ -71,10 +71,11 @@ class gravMachineTrack:
 
         self.path = None
         
+        self.pixelPermm = None
         # Opens a Folder and File dialog for choosing the dataset for analysis
         self.openFile(fileName = self.trackFile)
         
-        self.loadMetaData(fileName = self.trackFile)
+        self.loadMetaData()
         
         
         self.initializeTrack()
@@ -211,15 +212,15 @@ class gravMachineTrack:
                 
         #        self.setColorThresholds()
                 # PIV parameters
-                self.window_size = 64
-                self.overlap = 32
-                self.searchArea = 64
+                self.window_size = 256
+                self.overlap = 128
+                self.searchArea = 256
                 
                 print('Image height, Image width: {}, {}'.format(self.imH, self.imW))
-                if(pixelPermm is None):
-                    self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
-                else:
-                    self.pixelPermm = pixelPermm*(self.imW/1920)
+#                if(self.pixelPermm is None):
+#                    self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
+#                else:
+#                    self.pixelPermm = pixelPermm*(self.imW/1920)
                    
 
 
@@ -360,11 +361,15 @@ class gravMachineTrack:
                 print('Loading metadata file ...')
                 metadata = pd.read_csv(metadata_file)
                 
-                self.localTime = metadata['Local time']
+                self.localTime = metadata['Local time'][0]
                 
-                self.pixelPermm = metadata['PixelPermm']
+                self.pixelPermm = metadata['PixelPermm'][0]
                 
-                self.objective = metadata['Objective']
+                self.objective = metadata['Objective'][0]
+                
+                print(self.localTime)
+                print(self.pixelPermm)
+                print(self.objective)
         
        
             
@@ -888,7 +893,7 @@ class gravMachineTrack:
             
             
             
-            u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
+            u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.0, smoothing_param = 0)
             
             
             
@@ -982,16 +987,17 @@ class gravMachineTrack:
             pass
           
            # Plot the vectors
-        PIV_Functions.plotPIVdata(frame_a_color, x, y, u, v)
+        PIV_Functions.plotPIVdata(frame_a_color, x, y, u, v, Centroids = obj_position)
         # Find the mean velocity
         u_avg, v_avg = (np.nanmean(u), np.nanmean(v))
         u_std, v_std = (np.nanstd(u), np.nanstd(v))
         
-        
+        print(u_avg)
+        print(v_avg)
         return u_avg, v_avg, u_std, v_std
  
       
-    def FluidVelTimeSeries(self, overwrite_velocity = False, masking = True):
+    def FluidVelTimeSeries(self, overwrite_velocity = False, masking = False):
         # 
         '''
         Computes the Fluid velocity at each time point during which an image is available 
@@ -1006,6 +1012,8 @@ class gravMachineTrack:
         
         
         if(not os.path.exists(self.FluidVelocitySavePath) or overwrite_velocity):
+            
+            print("calculating fluid velocity time series ...")
         
             nImages = len(self.imageIndex)
 #            nImages = 100
@@ -1078,6 +1086,7 @@ class gravMachineTrack:
                 
             
         else:
+            print("Fluid time series found! Loading ...")
             with open(self.FluidVelocitySavePath, 'rb') as f:  # Python 3: open(..., 'wb')
                     self.imageIndex_array, self.u_avg_array, self.v_avg_array, self.u_std_array, self.v_std_array = pickle.load(f)
                 

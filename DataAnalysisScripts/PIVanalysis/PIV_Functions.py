@@ -214,7 +214,9 @@ def plotPIVdata(image,x,y,u,v, orgContour = None, Centroids = None, pixelPermm =
     ax3 = plt.quiver(x,y,u,v,color=[0,1,0,0.8])
 ##    ax3 = plt.quiver(x,y,u,v,color=[0,0,0,1])
     
-    plt.scatter(x,y,10,'r')
+    # Plot the centroid as recorded by the data
+#    plt.scatter(Centroids[0], Centroids[1], 10, color = 'b')
+#    plt.scatter(x,y,10,'r')
 #
 #    cbar = plt.colorbar(ax2)
 #
