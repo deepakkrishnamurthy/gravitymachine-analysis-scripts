@@ -29,7 +29,7 @@ rc('text', usetex='false')
 rcParams.update({'font.size': 16})
 
 # Color schemes for plotting
-Organisms = ['Sea cucumber','Dendraster','Brittlestar','Acorn worm','Sea urchin','Starfish','Snail','Polychaete','Polychate', 'Volvox','Noctiluca','Pyrocystis','Akashiwo', 'Akashiwo_Up', 'Ceratium_sp_noFork', 'Ceratium_sp_Fork', 'Euglena', 'Stentor']
+Organisms = ['Sea cucumber','Dendraster','Brittlestar','Acorn worm','Sea urchin','Starfish','Snail','Polychaete','Polychate', 'Volvox','Noctiluca','Pyrocystis','Akashiwo', 'Akashiwo_Up', 'Ceratium_sp_noFork', 'Ceratium_sp_Fork', 'Euglena', 'Stentor', 'Acantharia']
 
 OrganismScientific = {'Acorn worm':'S. californicum','Sea urchin':'S. purpuratus','Sea cucumber':'P. parvimensis','Brittlestar':'O. spiculata','Dendraster':'D. excentricus','Polychaete':'Owenia spp.','Starfish':'P. miniata','Snail':'C. fornicata','Noctiluca':'N. scintillans','Pyrocystis':'P. noctiluca','Volvox':'V. aureus', 'Akashiwo':'A. sanguinea', 'Ceratium_sp_noFork':'Ceratium sp.', 'Ceratium_sp_Fork': 'C. furca', 'Euglena' : 'E. gracilis', 'Stentor': 'S. coeruleus'}
 MarkerStyle = {'Acorn worm':'o','Sea urchin':'s','Sea cucumber':'p','Brittlestar':'1','Dendraster':'D','Polychaete':'P','Polychate':'.','Starfish':'*','Snail':'8','Noctiluca':'x','Pyrocystis':'+','Volvox':'v','Akashiwo':'h', 'Ceratium_sp_noFork':'s', 'Ceratium_sp_Fork': '>', 'Euglena':'<', 'Stentor':'H'}
@@ -51,11 +51,13 @@ dataFolder = '/Users/deepak/Dropbox/GravityMachine/ExperimentResults/MSD_Analysi
 
 files = os.listdir(dataFolder)
 
-Organisms_to_plot = ['Acorn worm', 'Dendraster', 'Starfish', 'Polychaete', 'Polychate', 'Snail','Brittlestar','Sea cucumber','Sea urchin']
+#Organisms_to_plot = ['Acorn worm', 'Dendraster', 'Starfish', 'Polychaete', 'Polychate', 'Snail','Brittlestar','Sea cucumber','Sea urchin']
+#
+#SingeCells = ['Akashiwo','Akashiwo_Up', 'Ceratium_sp_noFork','Euglena', 'Stentor']
 
-SingeCells = ['Akashiwo','Akashiwo_Up', 'Ceratium_sp_noFork','Euglena', 'Stentor']
+Organisms_to_plot = ['Acantharia']
 
-Organisms_to_plot += SingeCells
+#Organisms_to_plot += SingeCells
 
 fig = plt.figure(figsize=(16,16))
 
@@ -85,6 +87,7 @@ for file in files:
         Organism = data['Organism'][0]
         Condition = data['Condition'][0]
         
+        print(Organism)
         if(Organism in Organisms_to_plot):
             
             Vx = data['VelocityX']
@@ -153,8 +156,8 @@ for file in files:
             
             
 #
-plt.savefig('VelocityOrientationPolarPlots_SingleCell_binsize_5.svg',dpi = 150)
-plt.savefig('VelocityOrientationPolarPlots_SingleCell_binsize_5.png',dpi = 150)
+plt.savefig('VelocityOrientationPolarPlots_Acantharians_binsize_5.svg',dpi = 150)
+plt.savefig('VelocityOrientationPolarPlots_Acantharians_binsize_5.png',dpi = 150)
 
 Theta_df.to_csv('Theta statistic.csv')    
 
@@ -166,6 +169,8 @@ sns.scatterplot(x = 'Organism', y = 'Theta mean', data = Theta_df)
 KS_test_df = pd.DataFrame({'Organism':[], 'Condition':[], 'KS test statistic':[], 'p-value':[]})
 
 velocity_df = pd.DataFrame({'Organism':[], 'Condition':[], 'Vx mean':[], 'Vx std':[], 'Vz mean':[], 'Vz std':[]})
+
+plt.style.use("dark_background")
 # Velcity distributions
 for file in files:
     
@@ -210,7 +215,7 @@ for file in files:
             xlim2 = 2
             decimals = 1
 
-            plt.figure(figsize=(4,4))
+            plt.figure(figsize=(6,6))
             ax0 = sns.distplot(Vz,kde = True , color = 'b', norm_hist = True, hist_kws={"histtype": "bar","edgecolor":'w', "linewidth": 0.2, "alpha": 0.5, "label":'Vz'})
             #ax0 = sns.distplot(dataFrame_full.loc[dataFrame_full["Organism"] == Organism2,"VelocityZ"],  kde = True , color = 'k', norm_hist = True, hist_kws={"histtype": "bar","edgecolor":'w', "linewidth": 0.2, "alpha": 0.5, "label":'Vz'})
 
@@ -232,5 +237,5 @@ for file in files:
             plt.savefig(Organism+'_'+Condition+'VelocityDist.svg', dpi = 150)
             plt.savefig(Organism+'_'+Condition+'VelocityDist.png', dpi = 150)
 
-velocity_df.to_csv('VelocityStatistic_combined.csv')
-KS_test_df.to_csv('KS_test statistic.csv') 
+#velocity_df.to_csv('VelocityStatistic_combined.csv')
+#KS_test_df.to_csv('KS_test statistic.csv') 

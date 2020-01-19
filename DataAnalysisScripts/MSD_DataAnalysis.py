@@ -28,7 +28,9 @@ minTrackDuration = 30
 # Folder in which to save analysis results
 saveFolder = 'C:/Users/deepak/Dropbox/GravityMachine/ExperimentResults/MSD_Analysis'
     
-analysis_file = 'C:/Users/deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/CeratiumSp_noFork.csv'
+#analysis_file = 'C:/Users/deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/Acantharia.csv'
+
+analysis_file = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/TracksUsedForAnalysis/MSD_VelocityDistrib_TracksUsed/Acantharia.csv'
 
 analysis_df = pd.read_csv(analysis_file)
 
@@ -109,13 +111,13 @@ for ii in range(nUniqueConditions):
 
 # Non-linear least-squares fitting Including Correlated Error
 
-msd1.fitTrajectories(overwrite = True)
+#msd1.fitTrajectories(overwrite = True)
 
 # MSD plots
 
-msd1.plotMSD(figname = 1, plot_fit= True, savefig = True)
+#msd1.plotMSD(figname = 1, plot_fit= True, savefig = True)
 
-msd1.plotLocalSlope(savefig = True)
+#msd1.plotLocalSlope(savefig = True)
         
         
     

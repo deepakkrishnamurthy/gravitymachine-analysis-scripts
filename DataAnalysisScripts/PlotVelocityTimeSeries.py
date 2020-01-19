@@ -34,20 +34,28 @@ from matplotlib import rc
 
 rc('font', family='sans-serif') 
 rc('font', serif='Helvetica') 
-rc('text', usetex='false') 
+rc('text', usetex='false') '\\\'
+
+\
+\
+
+\\  
 rcParams.update({'font.size': 26})
 
 path1 = 'E:/HOT317_GravityMachine_1/Day1/withoutBlock_655PM'
 
 track1 = 'track000_0_0_analysis.csv'
 
-path2 = 'E:/HOT317_GravityMachine_1/Day2/PIV_afterEddingTwoLayeredBlock_track1_chamberCenter'
+#path2 = 'E:/HOT317_GravityMachine_1/Day2/PIV_afterEddingTwoLayeredBlock_track1_chamberCenter'
+#
+#track2 = 'track000_0_10_analysis.csv'
 
-track2 = 'track000_0_10_analysis.csv'
+path2 = 'E:/HOT317_GravityMachine_1/Day1/track_afterBarrier_4 21PM_50fps'
+track2 = 'track000_0_0_analysis.csv'
 
 vel_file_1 = 'fluidVelocityTimeSeries_0_0.pkl'
 
-vel_file_2 = 'fluidVelocityTimeSeries_0_10.pkl'
+vel_file_2 = 'fluidVelocityTimeSeries_0_0.pkl'
 
 
 
@@ -78,3 +86,12 @@ plt.xlabel('Time (s)')
 plt.ylabel('Spatially averaged velocity magnitude (mm/s)')
 plt.show()
 
+plt.figure()
+
+ax1 = plt.plot(df_1['Time'], v_avg_array_1**2, 'r-', linewidth = 2)
+
+ax2 = plt.plot(df_2['Time'], v_avg_array_2**2, 'b--', linewidth = 2)
+
+plt.xlabel('Time (s)')
+plt.ylabel('Spatially averaged velocity magnitude (mm/s)')
+plt.show()

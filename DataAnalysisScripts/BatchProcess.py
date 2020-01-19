@@ -48,7 +48,7 @@ for ii in range(len(df_batch)):
     print(FileName)
     print(Organism)
     print(Condition)
-    track = GravityMachineTrack.gravMachineTrack(trackFile = FileName, organism = Organism, condition = Condition, trackDescription = Description, Tmin = Tmin, Tmax = Tmax, computeDisp = True, overwrite_piv = True, overwrite_velocity = True, findDims = True, localTime = LocalTime, flip_z = False, pixelPermm = 1122.67, scaleFactor = 5)
+    track = GravityMachineTrack.gravMachineTrack(trackFile = FileName, organism = Organism, condition = Condition, trackDescription = Description, Tmin = Tmin, Tmax = Tmax, computeDisp = True, overwrite_piv = False, overwrite_velocity = False, findDims = True, localTime = LocalTime, flip_z = False, pixelPermm = 1122.67, scaleFactor = 5)
 #
     track.saveAnalysisData(overwrite = True)
 
