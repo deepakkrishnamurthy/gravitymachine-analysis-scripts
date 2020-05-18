@@ -17,6 +17,7 @@ import openpiv.process
 import openpiv.scaling
 import openpiv.validation
 import openpiv.filters
+from openpiv import  pyprocess
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -158,8 +159,10 @@ def doPIV(frame_a_color,frame_b_color, dT = 1.0, win_size = 64, overlap = 32, se
         frame_a = clahe.apply(frame_a)
         frame_b = clahe.apply(frame_b)
 
-    u, v, sig2noise = openpiv.process.extended_search_area_piv( frame_a.astype(np.int32), frame_b.astype(np.int32), window_size = win_size, overlap = overlap, dt = dT, search_area_size = searchArea, sig2noise_method='peak2peak' )
+#    u, v, sig2noise = openpiv.process.extended_search_area_piv( frame_a.astype(np.int32), frame_b.astype(np.int32), window_size = win_size, overlap = overlap, dt = dT, search_area_size = searchArea, sig2noise_method='peak2peak' )
     
+    u, v, sig2noise = pyprocess.extended_search_area_piv( frame_a.astype(np.int32), frame_b.astype(np.int32), corr_method='fft', window_size = win_size, overlap = overlap, dt = dT, search_area_size = searchArea, sig2noise_method='peak2peak' )
+
     x, y = openpiv.process.get_coordinates( image_size=frame_a.shape, window_size = win_size, overlap = overlap )
 
     return x,y,u,v, sig2noise

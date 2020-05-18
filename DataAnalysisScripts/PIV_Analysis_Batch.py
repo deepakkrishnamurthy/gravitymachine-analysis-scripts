@@ -19,30 +19,31 @@ import openpiv.validation
 import openpiv.filters
 import cv2
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import cmocean
 import os
-import time
-import scipy
-import scipy.ndimage as ndimage
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+#import time
+#import scipy
+#import scipy.ndimage as ndimage
+#from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 import pickle
 plt.close("all")
-from PIL import Image
+#from PIL import Image
 import imp
 import GravityMachineTrack
 imp.reload(GravityMachineTrack)
 import FigureParameters
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from smoothn import *
-from rangeslider_functions import *
-from matplotlib.patches import Circle, Wedge, Polygon
-import PIVanalysis.FlowFunctions
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
+#from smoothn import *
+#from rangeslider_functions import *
+#from matplotlib.patches import Circle, Wedge, Polygon
+#import PIVanalysis.FlowFunctions
 import PIVanalysis.PIV_Functions as PIV_Functions
 import pandas as pd
 
 
-trackFile = 'E:/HopkinsEmbroyologyCourse_GoodData/2018_06_12/Starfish/StarFish6/track_mod.csv'
+#trackFile = 'E:/HopkinsEmbroyologyCourse_GoodData/2018_06_12/Starfish/StarFish6/track_mod.csv'
+#trackFile = 'G:/HopkinsEmbroyologyCourse_GoodData/2018_06_12/Starfish/StarFish6/track_mod.csv'
+
+trackFile = 'H:/2019 Monterey Trip/Vorticella_GM/2019_08_21/Track4/track000.csv'
 
 Track = GravityMachineTrack.gravMachineTrack(trackFile = trackFile, findDims = True)
 # PIV frames based on time
@@ -50,7 +51,7 @@ Tmin = 0
 Tmax = 10
 
 # PIV frames based on Image indices
-ImgMin = 11372
+ImgMin = 828
 nImages = 10
 Imgmax = 0
 
@@ -97,7 +98,7 @@ def doPIVBatch(Track = None, ImagePairs = None, dT_array = None, win_size = 64, 
         x,y,u,v, sig2noise = PIV_Functions.doPIV(frame_a_color,frame_b_color, dT = deltaT, win_size = win_size, overlap = overlap, searchArea = searchArea, apply_clahe = False)
         
         
-#        u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
+        u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
 
         
         u,v = (PIV_Functions.data2RealUnits(data = u,scale = 1/(Track.pixelPermm)), PIV_Functions.data2RealUnits(data = v,scale = 1/(Track.pixelPermm)))
@@ -119,24 +120,26 @@ def doPIVBatch(Track = None, ImagePairs = None, dT_array = None, win_size = 64, 
         
     
 
+
 def createImagePairArray(Track, startImage = ImgMin, nImages = nImages, stopImage = None):
-    
-    startImage_str = 'IMG_'+'{:05d}'.format(startImage)+'.tif'
-    stopImage = startImage + nImages
-    stopImage_str = 'IMG_'+'{:05d}'.format(stopImage)+'.tif'
+   #Creates a list of image-pairs based on the track-data and image bounds.
+   
+   startImage_str = 'IMG_'+'{:07d}'.format(startImage)+'.tif'
+   stopImage = startImage + nImages
+   stopImage_str = 'IMG_'+'{:07d}'.format(stopImage)+'.tif'
     
     
     
     
 #        print(Track1.ImageName[imageIndex] == startImage_str)
     
-    startImageIndex = np.int(np.array(np.nonzero(Track.df['Image name'][Track.imageIndex]== startImage_str)))
-    stopImageIndex = np.int(np.array(np.nonzero(Track.df['Image name'][Track.imageIndex] == stopImage_str)))
+   startImageIndex = np.int(np.array(np.nonzero(Track.df['Image name'][Track.imageIndex]== startImage_str)))
+   stopImageIndex = np.int(np.array(np.nonzero(Track.df['Image name'][Track.imageIndex] == stopImage_str)))
     
     
 
-    print(startImageIndex)
-    print(stopImageIndex)
+   print(startImageIndex)
+   print(stopImageIndex)
 #        
 #        print(Track1.ImageName[imageIndex[startImageIndex]])
 #        print(Track1.ImageName[imageIndex[stopImageIndex]])
@@ -145,14 +148,14 @@ def createImagePairArray(Track, startImage = ImgMin, nImages = nImages, stopImag
     
     # Contains the global indices in the data corresponding to the images
     
-    dT_array = [Track.df['Time'][Track.imageIndex[ii+1]] - Track.df['Time'][Track.imageIndex[ii]] for ii in range(startImageIndex,stopImageIndex)]
+   dT_array = [Track.df['Time'][Track.imageIndex[ii+1]] - Track.df['Time'][Track.imageIndex[ii]] for ii in range(startImageIndex,stopImageIndex)]
         
-    ImagePairs = [[Track.df['Image name'][Track.imageIndex[ii]], Track.df['Image name'][Track.imageIndex[ii+1]]]  for ii in range(startImageIndex,stopImageIndex)]
-    ImagePairs = np.array(ImagePairs)
+   ImagePairs = [[Track.df['Image name'][Track.imageIndex[ii]], Track.df['Image name'][Track.imageIndex[ii+1]]]  for ii in range(startImageIndex,stopImageIndex)]
+   ImagePairs = np.array(ImagePairs)
     
-    print(ImagePairs)
+   print(ImagePairs)
     
-    return ImagePairs, dT_array
+   return ImagePairs, dT_array
     
 
 
