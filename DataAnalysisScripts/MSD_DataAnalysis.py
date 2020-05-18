@@ -30,7 +30,9 @@ saveFolder = 'C:/Users/deepak/Dropbox/GravityMachine/ExperimentResults/MSD_Analy
     
 #analysis_file = 'C:/Users/deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/Acantharia.csv'
 
-analysis_file = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/TracksUsedForAnalysis/MSD_VelocityDistrib_TracksUsed/Acantharia.csv'
+#analysis_file = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/TracksUsedForAnalysis/MSD_VelocityDistrib_TracksUsed/Acantharia.csv'
+
+analysis_file = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/TracksUsedForAnalysis/MSD_VelocityDistrib_TracksUsed/CeratiumSp_noFork.csv'
 
 analysis_df = pd.read_csv(analysis_file)
 
@@ -97,7 +99,7 @@ for ii in range(nUniqueConditions):
     #    msd1 = msdanalyzer(testFlag=0)
     
         msd1.computeSqDisp(save = True)
-        msd1.computeMSD(save = True, overwrite = True)
+        msd1.computeMSD(save = True, overwrite = False)
     
         msd1.calculate_velocityDist()
         
@@ -111,11 +113,11 @@ for ii in range(nUniqueConditions):
 
 # Non-linear least-squares fitting Including Correlated Error
 
-#msd1.fitTrajectories(overwrite = True)
+msd1.fitTrajectories(overwrite = True)
 
 # MSD plots
 
-#msd1.plotMSD(figname = 1, plot_fit= True, savefig = True)
+msd1.plotMSD(figname = 1, plot_fit= True, savefig = True)
 
 #msd1.plotLocalSlope(savefig = True)
         

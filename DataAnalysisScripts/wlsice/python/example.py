@@ -119,17 +119,17 @@ def coff_det(y, f):
 
 
 
-def main(args):
+def main(data_path):
     "Perform a least squares including correlation in error on data in folder"
 
-    if len(args) < 2:
-        print("Usage: %s <data-path/>" % args[0])
-        sys.exit(1)
+#    if len(args) < 2:
+#        print("Usage: %s <data-path/>" % args[0])
+#        sys.exit(1)
 
     # Read in data. Assumes path given is a folder where _all_ files
     # are 2 column files with x ("time") being column 1 and y
     # ("trajectory") being column 2..
-    time, trajectories = read_in_data(args[1])
+    time, trajectories = read_in_data(data_path)
     M, N = np.shape(trajectories)
 
     min_method = "nm"           # Use Nelder-Mead minimization method
@@ -180,4 +180,5 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    data_path = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/DataAnalysisScripts/wlsice/data'
+    main(data_path)

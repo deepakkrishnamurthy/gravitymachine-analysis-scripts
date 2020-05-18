@@ -185,7 +185,10 @@ def fit(time, trajectories, guess, min_method='nm'):
     y_sigma = np.sqrt(np.diag(C))
 
     # LS-ICE
+    print(M)
     C = C / M
+    
+    print(C)
 
     R = np.linalg.inv(np.diag(np.diag(C), 0))
 

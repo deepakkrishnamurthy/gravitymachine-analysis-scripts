@@ -19,7 +19,7 @@ from wlsice.python import wlsice as wlsice
 # imp.reload(wlsice)
 import seaborn as sns
 from pyentrp import entropy as ent
-import math
+from datetime import datetime
 
 def squaredDisp(data):
     
@@ -32,8 +32,16 @@ class msdanalyzer:
         self.precision = 12
         self.nDims = 3
         self.testFlag = testFlag
-        self.Organism = Organism
-        self.Condition = Condition
+        dateTimeObj = datetime.now()
+        if(self.testFlag):
+            self.Organism = 'Run_Tumble_Swimmers'
+            
+            self.Condition = dateTimeObj.strftime("%d-%b-%Y_%H_%M_%S")
+
+        else:
+            self.Organism = Organism
+            self.Condition = Condition
+            
        
         
         
@@ -49,7 +57,7 @@ class msdanalyzer:
         if(not os.path.exists(self.figuresFolder)):
             os.makedirs(self.figuresFolder)
 
-        self.fittingFolder = os.path.join(self.rootFolder, 'TaylorFunctionFitting_Analysis')
+        self.fittingFolder = os.path.join(self.rootFolder, 'TaylorFunctionFitting_Analysis' +dateTimeObj.strftime("%d-%b-%Y"))
 
         if(not os.path.exists(self.fittingFolder)):
             os.makedirs(self.fittingFolder)
@@ -63,10 +71,7 @@ class msdanalyzer:
             os.makedirs(self.entropyFolder)
 
         # Path in which to save the resulting MSD trajectories
-
         self.saveFile = self.Organism+'_'+self.Condition
-
-
         # Create sub-folder for each condition
         self.subFolder = self.Organism + '_' + self.Condition
 
@@ -86,7 +91,7 @@ class msdanalyzer:
         if(self.testFlag == 1 and Tracks is None):
             self.maxDelay = 50
             self.timeWindow = 5
-            # Length of the delays window over which we calculate MSD
+            # Length of the delays array for Sub-sampling of the trajectory and over which we calculate MSD
             self.tLen = 1000
             # self.genTestTraj()
             self.genRunTumbleTraj(v = v, tau = tau)
@@ -166,6 +171,7 @@ class msdanalyzer:
         
         self.Tracks = Tracks
         
+        # Common time array for Sub-sampling of the trajectory.
         self.delays = np.linspace(0,self.maxDelay,self.tLen)
 #        print(Tracks[0].T)
             
@@ -174,12 +180,12 @@ class msdanalyzer:
 
         Tracks = []
         
-        self.nTracks = 100
+        self.nTracks = 50
 
         print('Generating test trajectories for {} swimmers \n with velocity {} and run-time {}'. format(self.nTracks, v, tau))
 
         
-        timeSteps = 5000
+        timeSteps = 1000
 
         boxSize = 2
         
@@ -660,61 +666,109 @@ class msdanalyzer:
                 setattr(self, attr, dataFrame[attr])
 
             self.OrgSize_mean, self.OrgSize_std = dataFrame['OrgSize mean'][0], dataFrame['OrgSize std'][0]
+    
+    
+        
+        
+#    def computeLocalSlope(self, TimeArray, Track):
+#
+#        TimeArray = np.array(TimeArray)
+#        Track = np.array(Track)
+#
+#        # Time window over which data is used for extracting the slope
+#        window_size = int(self.maxDelay/10)
+#        print('Window size {}(s)'.format(window_size))
+#
+#        # Time resolution of the extracted slope curve
+#        step_size = (TimeArray[1] - TimeArray[0])
+#
+#        T_start = TimeArray[1]
+#        startIndex = 0
+#        counter = 0
+#
+#        Slope_Array = []
+#        Delays_Array = []
+#
+#        while (T_start < np.max(TimeArray)-window_size):
+#                
+#            mask1 = TimeArray>=T_start 
+#            mask2 = TimeArray<= T_start + window_size
+#            T_subTrack = TimeArray[mask1 & mask2]
+#
+#            subTrack = Track[mask1 & mask2]
+#
+#            # Convert to log-scale to extract the slope
+#            T_log = np.log(T_subTrack)
+#            subTrack_log = np.log(subTrack)
+#
+#            # plt.figure()
+#            # plt.plot(T_log, subTrack_log, 'ro')
+#            # plt.show()
+#
+#            # Perform a linear fit and record the slope
+#            p = np.polyfit(T_log, subTrack_log, deg = 1)
+#
+#            Slope_Array.append(p[0])
+#            Delays_Array.append(T_start)
+#
+#            T_start += step_size
+#
+#
+#        Slope_Array = np.array(Slope_Array)
+#        Delays_Array = np.array(Delays_Array)
 
-            
-    def computeLocalSlope(self, TimeArray, Track):
-
-        TimeArray = np.array(TimeArray)
-        Track = np.array(Track)
-
-        # Time window over which data is used for extracting the slope
-        window_size = int(self.maxDelay/10)
-        print('Window size {}(s)'.format(window_size))
-
-        # Time resolution of the extracted slope curve
-        step_size = (TimeArray[1] - TimeArray[0])
-
-        T_start = TimeArray[1]
-        startIndex = 0
-        counter = 0
-
-        Slope_Array = []
-        Delays_Array = []
-
-        while (T_start < np.max(TimeArray)-window_size):
-                
-            mask1 = TimeArray>=T_start 
-            mask2 = TimeArray<= T_start + window_size
-            T_subTrack = TimeArray[mask1 & mask2]
-
-            subTrack = Track[mask1 & mask2]
-
-            # Convert to log-scale to extract the slope
-            T_log = np.log(T_subTrack)
-            subTrack_log = np.log(subTrack)
-
-            # plt.figure()
-            # plt.plot(T_log, subTrack_log, 'ro')
-            # plt.show()
-
-            # Perform a linear fit and record the slope
-            p = np.polyfit(T_log, subTrack_log, deg = 1)
-
-            Slope_Array.append(p[0])
-            Delays_Array.append(T_start)
-
-            T_start += step_size
 
 
-        Slope_Array = np.array(Slope_Array)
-        Delays_Array = np.array(Delays_Array)
-
-
-
-        return Delays_Array, Slope_Array
+#        return Delays_Array, Slope_Array
     #--------------------------------------------------------------------------------------------------------
     # Weighted-Least-Squares with Correlated Errors Fitting Functions
     #--------------------------------------------------------------------------------------------------------
+    # Define the power-law function, its gradient and Hessian. 
+
+    def f_powerlaw(self, t, params):
+        """A powerlaw: a*t**b"""
+        assert(len(params) == 2)
+        return np.multiply(params[0], np.power(t, params[1]))
+    
+    
+    # np.array(1), np.array(1) -> np.array(2)
+    def df_powerlaw(self, t, params):
+        """Gradient of a powerlaw, with regards to parameters a,b:
+        gradient(a*t**b) = [t**b, a*log(t)*t**b]
+        """
+        assert(t[0] > 0)
+        assert(len(params) == 2)
+        a = params[0]
+        b = params[1]
+    
+        dfd_lam = np.zeros((len(params), len(t)))
+        dfd_lam[0] = np.power(t, b) # list of N numbers
+        dfd_lam[1] = np.multiply(a*np.log(t), np.power(t, b)) # list of N numbers
+        return dfd_lam
+    
+    # np.array(1), np.array(1) -> np.array(3!)
+    def d2f_powerlaw(self, t, params):
+        """Return Hessian of powerlaw"""
+        a = params[0]
+        b = params[1]
+    
+        d2f = np.zeros((len(params), len(params), len(t)))
+    
+        # d2f / da da
+        # df2[0,0] = np.zeroes(np.shape(t)) #(already there)
+    
+        # d2f / da db
+        d2f[0,1] = np.multiply(np.log(t), np.power(t,b))
+    
+        # d2f / db da
+        d2f[1,0] = d2f[0,1]
+    
+        # d2f / db db
+        d2f[1,1] = np.multiply(a*(np.log(t)**2), np.power(t,b))
+    
+        return d2f
+    
+    
     # Ballistic motion with velocity v
     #--------------------------------------------------------------------------------------------------------
     def f_ballistic(self, t, params):
@@ -868,6 +922,8 @@ class msdanalyzer:
 
 
         M, N = np.shape(Traj)
+        
+        print('No:trajectories: {}, No:of time points {}'.format(M,N))
 
         min_method = "nm"           # Use Nelder-Mead minimization method
         
@@ -949,59 +1005,61 @@ class msdanalyzer:
             
                 self.sigma_v_Z, self.sigma_tau_Z = self.sigma_Z[0], np.nan
 
-            # calculate the local slope of MSD and its asymptotes
-            self.Delays_Z, self.Slope_Z = self.computeLocalSlope(self.delays, self.MSD_Z)
-            self.Delays_X, self.Slope_X = self.computeLocalSlope(self.delays, self.MSD_X)
+#            # calculate the local slope of MSD and its asymptotes
+#            self.Delays_Z, self.Slope_Z = self.computeLocalSlope(self.delays, self.MSD_Z)
+#            self.Delays_X, self.Slope_X = self.computeLocalSlope(self.delays, self.MSD_X)
 
-            # Number of time points corresponding to 1s of data
-            ind_5s = int(5/(self.Delays_Z[1] - self.Delays_Z[0]))
-
-            ind_1s = int(1/(self.Delays_Z[1] - self.Delays_Z[0]))
-
-            print('1 s data points: {}'.format(ind_1s))
-            print('5 s data points: {}'.format(ind_5s))
-                
-            index_x = next((i for i,x in enumerate(self.Delays_X) if x >= 10*self.tau_X), None)
-
-            if(index_x is None):
-                index_x = len(self.Delays_X)
-
-            print(index_x)
-
-            self.slope_asymp_X = np.nanmean(self.Slope_X[index_x - ind_1s : index_x])
-
-
-            self.slope_asymp_X_sigma = np.nanstd(self.Slope_X[index_x - ind_1s : index_x])
+#             Number of time points corresponding to 1s of data
+#            ind_5s = int(5/(self.Delays_Z[1] - self.Delays_Z[0]))
+#
+#            ind_1s = int(1/(self.Delays_Z[1] - self.Delays_Z[0]))
+#
+#            print('1 s data points: {}'.format(ind_1s))
+#            print('5 s data points: {}'.format(ind_5s))
+#                
+#            index_x = next((i for i,x in enumerate(self.Delays_X) if x >= 10*self.tau_X), None)
+#
+#            if(index_x is None):
+#                index_x = len(self.Delays_X)
+#
+#            print(index_x)
+#
+#            self.slope_asymp_X = np.nanmean(self.Slope_X[index_x - ind_1s : index_x])
+#
+#
+#            self.slope_asymp_X_sigma = np.nanstd(self.Slope_X[index_x - ind_1s : index_x])
     
 
-            if(not np.isnan(self.tau_Z).any()):
-                index_z = next((i for i,x in enumerate(self.Delays_Z) if x >= 10*self.tau_Z), None)
-                if(index_z is None):
-                    index_z = len(self.Delays_Z)
-                print(index_z)
-                self.slope_asymp_Z = np.nanmean(self.Slope_Z[index_z - ind_5s : index_z])
-                self.slope_asymp_Z_sigma = np.nanstd(self.Slope_Z[index_z - ind_5s : index_z])
-
-            else:
-                self.slope_asymp_Z = np.nanmean(self.Slope_Z[-ind_1s : -1])
-                self.slope_asymp_Z_sigma = np.nanstd(self.Slope_Z[-ind_1s : -1])
-
-            print('Slope asymptote Z: {} +- {}'.format(self.slope_asymp_Z, self.slope_asymp_Z_sigma))
-            print('Slope asymptote X: {} +- {}'.format(self.slope_asymp_X, self.slope_asymp_X_sigma))
+#            if(not np.isnan(self.tau_Z).any()):
+#                index_z = next((i for i,x in enumerate(self.Delays_Z) if x >= 10*self.tau_Z), None)
+#                if(index_z is None):
+#                    index_z = len(self.Delays_Z)
+#                print(index_z)
+#                self.slope_asymp_Z = np.nanmean(self.Slope_Z[index_z - ind_5s : index_z])
+#                self.slope_asymp_Z_sigma = np.nanstd(self.Slope_Z[index_z - ind_5s : index_z])
+#
+#            else:
+#                self.slope_asymp_Z = np.nanmean(self.Slope_Z[-ind_1s : -1])
+#                self.slope_asymp_Z_sigma = np.nanstd(self.Slope_Z[-ind_1s : -1])
+#
+#            print('Slope asymptote Z: {} +- {}'.format(self.slope_asymp_Z, self.slope_asymp_Z_sigma))
+#            print('Slope asymptote X: {} +- {}'.format(self.slope_asymp_X, self.slope_asymp_X_sigma))
 
 
             # Calculate the mean and standard deviation of the velocity time series
 
-            self.calculate_velocityDist()
+#            self.calculate_velocityDist()
             self.getMeanStd_velocity()
 
-
+            
+            self.slope_asymp_Z, self.slope_asymp_Z_sigma = self.computeLocalSlope_MSD_vs_variability(Time=Time, Traj_Z =Traj_Z, time_window = 5)
 
 
             # Save the resulting fit parameters in a file
 
             # params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'OrgSize_mean':[self.OrgSize_mean], 'OrgSize_std':[self.OrgSize_std], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z], 'MSD_Slope_Z':[self.slope_asymp_Z], 'MSD_Slope_Z_sigma':[self.slope_asymp_Z_sigma], 'MSD_Slope_X':[self.slope_asymp_X], 'MSD_Slope_X_sigma':[self.slope_asymp_X_sigma], 'Vx_variability_mean':[self.Vx_variability_mean], 'Vx_variability_std':[self.Vx_variability_std], 'Vz_variability_mean':[self.Vz_variability_mean], 'Vz_variability_std':[self.Vz_variability_std]})
-            params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'OrgSize_mean':[self.OrgSize_mean], 'OrgSize_std':[self.OrgSize_std], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z], 'coeff_det_x':[self.coeff_det_X], 'coeff_det_z':[self.coeff_det_Z],  'MSD_Slope_Z':[self.slope_asymp_Z], 'MSD_Slope_Z_sigma':[self.slope_asymp_Z_sigma], 'MSD_Slope_X':[self.slope_asymp_X], 'MSD_Slope_X_sigma':[self.slope_asymp_X_sigma], 'Vx_mean':[self.Vx_mean], 'Vx_std':[self.Vx_std], 'Vz_mean':[self.Vz_mean], 'Vz_std':[self.Vz_std]})
+            params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'OrgSize_mean':[self.OrgSize_mean], 'OrgSize_std':[self.OrgSize_std], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z], 'coeff_det_x':[self.coeff_det_X], 'coeff_det_z':[self.coeff_det_Z],  'MSD_Slope_Z':[self.slope_asymp_Z], 'MSD_Slope_Z_sigma':[self.slope_asymp_Z_sigma], 'Vx_mean':[self.Vx_mean], 'Vx_std':[self.Vx_std], 'Vz_mean':[self.Vz_mean], 'Vz_std':[self.Vz_std]})
+#            params_df = pd.DataFrame({'Organism':[self.Organism], 'Condition':[self.Condition], 'OrgSize_mean':[self.OrgSize_mean], 'OrgSize_std':[self.OrgSize_std], 'v_X':[self.v_X], 'sigma_v_X': [self.sigma_v_X],'tau_X':[self.tau_X], 'sigma_tau_X':[self.sigma_tau_X], 'v_Z':[self.v_Z], 'sigma_v_Z':[self.sigma_v_Z], 'tau_Z':[self.tau_Z], 'sigma_tau_Z':[self.sigma_tau_Z], 'coeff_det_x':[self.coeff_det_X], 'coeff_det_z':[self.coeff_det_Z]})
 
             params_df.to_csv(os.path.join(self.fittingFolder, saveFile))
 
@@ -1030,9 +1088,53 @@ class msdanalyzer:
             print(self.params_Z)
 
 
+    def computeLocalSlope_MSD_vs_variability(self, Time = None, Traj_Z = None, time_window = 10):
+        
+        # Calculating Slope using WLS ICE fit
+        print('Calculating Slope using WLS ICE fit...')
+        
+        starttime = np.max(self.delays) - time_window            # first time point to include in fitting
+        stoptime = np.max(self.delays)
+        epsilon0 = Time[1] - Time[0] # time step size
+        start_idx = int(starttime / epsilon0)
+        stop_idx = int(stoptime / epsilon0)
+        
+      
+        sub_Traj_Z = Traj_Z[:,start_idx:stop_idx]
+        sub_Time = Time[start_idx:stop_idx]
+        M,N = np.shape(sub_Traj_Z)
+        assert(N == len(sub_Time))
+        
+        # Perform the fit
+        min_method = "nm"           # Use Nelder-Mead minimization method
+        guess=np.array([.5,.5])     # Starting point in parameter space
+        # The analytical function to fit, its gradient, and hessian
+        
+        wlsice.init(self.f_powerlaw, self.df_powerlaw, self.d2f_powerlaw)
+        
+        # Perform the actual fit
+        params, sigma, chi2_min = wlsice.fit(sub_Time, sub_Traj_Z, guess, min_method)
+        
+        # RESULT:
+        print("# trajectories M=%s,\tsampling times N=%s, t_0=%s" % (M, N, sub_Time[0]))
+        print("# Optimal param:\t%s" % params)
+        print("# Sigma:\t%s" % sigma)
+        print("# Chi-square value: \t%s" % chi2_min)
+        
+        # % error in slope estimate
+        print('% error in slope estimate: {}'.format(100*sigma[1]/params[1]))
+        
+        localSlope_MSD_Z = params[1]
+        stdError_localSlope_MSD_Z = sigma[1]
+        
+        # Plot the MSD of the track segment along with the fit:
+        import PlotFunctions.PlotUtils as PlotUtils
 
-                
-                
+        plt.figure()
+        PlotUtils.errorfill(self.delays[start_idx:stop_idx], self.MSD_Z[start_idx:stop_idx], self.stdev_Z[start_idx:stop_idx], ax = plt.gca(), color = 'r', label = 'Vertical (Z)')
+        plt.plot(sub_Time, self.f_powerlaw(sub_Time, params), 'k--')
+        
+        return localSlope_MSD_Z, stdError_localSlope_MSD_Z
 #------------------------------------------------------------------------------
 # Functions for velocity distrtibution calculation 
 #------------------------------------------------------------------------------
@@ -1043,7 +1145,7 @@ class msdanalyzer:
         saveFile = self.saveFile + '_' + '_VelocityTimeSeries.csv'
 
         
-        overwrite = True
+        overwrite = False
 
         if(not os.path.exists(os.path.join(self.velocityDistFolder, saveFile)) or overwrite is True):
             Velocities_X = np.array([])
@@ -1053,8 +1155,6 @@ class msdanalyzer:
             # OrgDim_mean, OrgDim_std = self.get_Mean_Std('OrgDim')
             dataFrame_full = pd.DataFrame({'Organism':[],'Condition':[], 'Track':[], 'VelocityX':[],'VelocityY':[],'VelocityZ':[]})
             
-            counter = 0
-
             Vx_mean = np.zeros(self.nTracks)
             Vz_mean = np.zeros(self.nTracks)
 
@@ -1063,12 +1163,7 @@ class msdanalyzer:
 
             for ii in range(self.nTracks):
 
-                
-
                 currTrack = self.Tracks[ii]
-
-
-
                 print('...Analyzing Track {} of Duration {} s'.format(ii, np.max(currTrack.T)))
 
 #                AutoTracking = np.array(~currTrack.df['Manual Tracking'], dtype= 'bool')
@@ -1204,7 +1299,10 @@ class msdanalyzer:
         # Initialize entropy parameters
         
         # Maximum scale factor for MSE analysis in seconds
-        self.maxScaleFactor_time = 10
+        self.maxScaleFactor_time = 120
+        
+        # We calculate the entropy of the baseline white-noise signal using scaled number of data points to get better statistics.
+        self.scale_factor_test_signal = 5
         
         self.getCommonScalefactors()
         
@@ -1250,13 +1348,16 @@ class msdanalyzer:
                 
                 Signal = currTrack.Vz
                 
+                print('No:of track data points: {}'.format(len(Time)))
+                
                 # We want to calculate the r value after excluding outliers
                 tol = 0.2*np.nanstd(currTrack.Vz_smooth)
                 
                 std = np.nanstd(currTrack.Vz_smooth)
                 mean = np.nanmean(currTrack.Vz_smooth)
                 
-                test_signal = mean + np.random.normal(0, std, len(Time))
+                test_signal_time = np.linspace(0, np.max(Time), self.scale_factor_test_signal*len(Time))
+                test_signal = mean + np.random.normal(0, std, self.scale_factor_test_signal*len(Time))
                 
                 maxScale = int(np.ceil(self.maxScaleFactor_time/currTrack.dT))
                 
@@ -1283,7 +1384,7 @@ class msdanalyzer:
                 
                 # Plot the Signal and MSEs
                 axes = self.plot_signal_entropy(Time, Signal, self.ScaleFactors_common_time, mse_common, axes)
-                self.plot_signal_entropy(Time, test_signal, self.ScaleFactors_common_time, mse_common_test, axes, label = 'Noise test')
+                self.plot_signal_entropy(test_signal_time, test_signal, self.ScaleFactors_common_time, mse_common_test, axes, label = 'Noise test')
                 
               
                 
@@ -1388,11 +1489,12 @@ class msdanalyzer:
         plt.xlim(0,np.max(self.delays))
         plt.legend(loc='upper left', frameon=False)
         
-
-        if(np.isnan(self.tau_Z).any()):
-            ax0.plot(self.delays, self.f_ballistic(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Ballistic')
-        else:
-            ax0.plot(self.delays, self.f(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Taylor equation)')
+        
+        if(plot_fit):
+            if(np.isnan(self.tau_Z).any()):
+                ax0.plot(self.delays, self.f_ballistic(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Ballistic')
+            else:
+                ax0.plot(self.delays, self.f(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Taylor equation)')
 
         plt.title(self.Organism + '_' + self.Condition)
 
@@ -1403,9 +1505,9 @@ class msdanalyzer:
         
         
         # 
-        time = np.linspace(10,100,100)
-        A = 1
-        B = 0.01
+        time = self.delays
+        A = 0.1
+        B = 1
         X_linear = B*time
         X_quad = A*(time**2)
         
@@ -1429,8 +1531,8 @@ class msdanalyzer:
                 ax1.plot(self.delays, self.f(self.delays, self.params_Z), 'k-', label = 'Z - WLS-ICE Fit (Taylor equation)')
 
 
-        ax1.plot(time,X_linear,'k--')
-        ax1.plot(time,X_quad, 'k-')
+        ax1.plot(time,X_linear,'g--', linewidth=1)
+        ax1.plot(time,X_quad, 'g-', linewidth=1)
         ax1.set_yscale('log')
         ax1.set_xscale('log')
         ax1.set_xlabel('Time (s)')

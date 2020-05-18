@@ -59,32 +59,51 @@ save_folder = 'C:/Users/Deepak/Dropbox/GravityMachine/ExperimentResults/Combined
 
 os.chdir(save_folder)
 
-data_file = 'C:/Users/Deepak/Dropbox/GravityMachine/ExperimentResults/CombinedDatasets/MSE_calculation_combined.csv'
+#data_file = 'C:/Users/Deepak/Dropbox/GravityMachine/ExperimentResults/CombinedDatasets/MSE_calculation_combined.csv'
+data_file = 'C:/Users/Deepak/Dropbox/GravityMachine/ExperimentResults/Entropy_Analysis/MSE_calculation/Starfish_No light_MSE.csv'
     
 
 df = pd.read_csv(data_file)
 
-df_larvae = df[df['Organism'].isin(['Acorn worm', 'Starfish', 'Dendraster', 'Sea urchin', 'Sea cucumber', 'Snail'])]
+#df_larvae = df[df['Organism'].isin(['Acorn worm', 'Starfish', 'Dendraster', 'Sea urchin', 'Sea cucumber', 'Snail'])]
+#
+#df_singlecell = df[df['Organism'].isin(['Akashiwo', 'Ceratium_sp_Fork', 'Stentor'])]
 
-df_singlecell = df[df['Organism'].isin(['Akashiwo', 'Ceratium_sp_Fork', 'Stentor'])]
 
-print(df_larvae)
+## Plot the data using seaborn
+#saveFile = 'Starfish_longTime_Entropy'
+#plt.figure(figsize=(16,12))
+#sns.lineplot(x="Scale factor times", y="MSE_Vz",
+#             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 2), linewidth = 3, 
+#             data=df , markersize = 20)
+#
+#sns.lineplot(x="Scale factor times", y="MSE_noise",
+#             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 2), linewidth = 3, 
+#             data = df)
+#ax = plt.gca()
+#ax.legend(markerscale=4)
+#plt.title('MSE analysis')
+#plt.savefig(saveFile + '_' + 'MSEanalysis.svg', dpi = 150)
+#plt.savefig(saveFile + '_' + 'MSEanalysis.png', dpi = 150)
+
 
 # Plot the data using seaborn
-
+saveFile = 'Starfish_longTime_Entropy'
 plt.figure(figsize=(16,12))
 sns.lineplot(x="Scale factor times", y="MSE_Vz",
-             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 6), linewidth = 3, 
-             data=df_larvae , markersize = 20)
+             hue="Organism", style = 'Organism', markers = '^', color = 'y', linewidth = 3, 
+             data=df , markersize = 20)
 
 sns.lineplot(x="Scale factor times", y="MSE_noise",
-             hue="Organism", style = 'Organism', markers = False, palette = sns.color_palette("Set2", 1), linewidth = 2, 
-             data = df_larvae[df_larvae['Organism'].isin(['Acorn worm'])])
+             hue="Organism", style = 'Organism', color = 'k', linewidth = 3, 
+             data = df)
 ax = plt.gca()
 ax.legend(markerscale=4)
-plt.title('Comparative MSE analysis of larvae')
-plt.savefig('MSEanalysis_combined.svg', dpi = 150)
-plt.savefig('MSEanalysis_combined.png', dpi = 150)
+plt.title('MSE analysis')
+plt.savefig(saveFile + '_' + 'MSEanalysis.svg', dpi = 150)
+plt.savefig(saveFile + '_' + 'MSEanalysis.png', dpi = 150)
+
+
 
 
 #plt.figure(figsize=(16,12))
@@ -112,22 +131,22 @@ plt.savefig('MSEanalysis_combined.png', dpi = 150)
 
 
 
-plt.figure(figsize=(16,12))
-sns.lineplot(x="Scale factor times", y="MSE_Vz",
-             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 3), linewidth = 3, 
-             data =  df_singlecell, markersize = 20)
-
-sns.lineplot(x="Scale factor times", y="MSE_noise",
-             hue="Organism", style = 'Organism', markers = False, palette = sns.color_palette("Set2", 1), linewidth = 2, 
-             data = df_singlecell[df_singlecell['Organism'].isin(['Stentor'])] )
-ax = plt.gca()
-ax.legend(markerscale=4)
-plt.title('Single-cell trajectories')
-
-
-plt.ylim([0, 2.0])
-plt.savefig('SingleCellTrajectories.svg', dpi = 150)
-plt.savefig('SinglecellTrajectories.png', dpi = 150)
+#plt.figure(figsize=(16,12))
+#sns.lineplot(x="Scale factor times", y="MSE_Vz",
+#             hue="Organism", style = 'Organism', markers = True, palette = sns.color_palette("Set2", 3), linewidth = 3, 
+#             data =  df_singlecell, markersize = 20)
+#
+#sns.lineplot(x="Scale factor times", y="MSE_noise",
+#             hue="Organism", style = 'Organism', markers = False, palette = sns.color_palette("Set2", 1), linewidth = 2, 
+#             data = df_singlecell[df_singlecell['Organism'].isin(['Stentor'])] )
+#ax = plt.gca()
+#ax.legend(markerscale=4)
+#plt.title('Single-cell trajectories')
+#
+#
+#plt.ylim([0, 2.0])
+#plt.savefig('SingleCellTrajectories.svg', dpi = 150)
+#plt.savefig('SinglecellTrajectories.png', dpi = 150)
 
 
 # Calculate the entropy averaged across time scales

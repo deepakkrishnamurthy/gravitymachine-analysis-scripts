@@ -19,9 +19,7 @@ import os
 imp.reload(GravityMachineTrack)
 imp.reload(msdanalyzer)
 
-import matplotlib.pyplot as plt
 
-    
 #------------------------------------------------------------------------------------------------------------------------------    
 # Define some constants for the data analysis:
 
@@ -35,8 +33,8 @@ if(not os.path.exists(saveFolder)):
     os.makedirs(saveFolder)
     
     
-analysis_file = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/Entropy_Analysis_data/Volvox.csv'
-
+analysis_file = 'C:/Users/Deepak/Dropbox/GravityMachine/GravityMachineAnalysis_Scripts/TracksUsedForAnalysis/EntropyAnalysis_TracksUsed/Starfish_LongestTrack.csv'
+ 
 
 analysis_df = pd.read_csv(analysis_file)
 
@@ -88,7 +86,9 @@ for ii in range(nUniqueConditions):
             full_path = os.path.join(Track_df['rootFolder'],Track_df['trackFolder'], Track_df['trackFile'])
             
             
-            track = GravityMachineTrack.gravMachineTrack(trackFile = full_path , organism = Track_df['Organism'], condition = Track_df['Condition'], Tmin = Track_df['Tmin'], Tmax = Track_df['Tmax'], findDims = True)
+            track = GravityMachineTrack.gravMachineTrack(trackFile = full_path , organism = Track_df['Organism'], 
+                                                         condition = Track_df['Condition'], Tmin = Track_df['Tmin'], Tmax = Track_df['Tmax'], 
+                                                         findDims = True)
             
             try:
                 OrgDims.append(track.OrgDim)

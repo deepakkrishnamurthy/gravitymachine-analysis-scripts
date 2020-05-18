@@ -38,7 +38,10 @@ def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label = None):
 
 class gravMachineTrack:
 
-    def __init__(self, trackFile = None, organism = 'Plankton', condition = 'Control', Tmin=0, Tmax=0, frame_min = None, frame_max = None, indexing = 'time', computeDisp = False, findDims = False, orgDim = None, overwrite_piv = False, overwrite_velocity = False, scaleFactor = 20, localTime = 0, trackDescription = 'Normal', pixelPermm = None, flip_z = False, use_postprocessed = False):
+    def __init__(self, trackFile = None, organism = 'Plankton', condition = 'Control', Tmin=0, Tmax=0, frame_min = None, frame_max = None, 
+                 indexing = 'time', computeDisp = False, findDims = False, orgDim = None, overwrite_piv = False, overwrite_velocity = False, 
+                 scaleFactor = 20, localTime = 0, trackDescription = 'Normal', pixelPermm = None, flip_z = False, use_postprocessed = False, 
+                 smoothing_factor = 10):
         
         self.Organism = organism
         self.Condition = condition
@@ -72,6 +75,8 @@ class gravMachineTrack:
         self.path = None
         
         self.pixelPermm = None
+        self.mmPerPixel= None
+        
         # Opens a Folder and File dialog for choosing the dataset for analysis
         self.openFile(fileName = self.trackFile)
         
@@ -199,7 +204,8 @@ class gravMachineTrack:
             print('Sampling frequency: {}'.format(self.samplingFreq))
             # Window to use for smoothing data. 
             # IMPORTANT: We only keep variations 10 times slower that the frame rate of data capture.
-            self.window_time = 10*self.dT
+            self.window_time = smoothing_factor*self.dT
+            print('Smoothing window: {}'.format(self.window_time))
             
 #            if(not self.use_postprocessed):
             self.interp_positions()
@@ -216,28 +222,34 @@ class gravMachineTrack:
                 self.overlap = 128
                 self.searchArea = 256
                 
-                print('Image height, Image width: {}, {}'.format(self.imH, self.imW))
-#                if(self.pixelPermm is None):
-#                    self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
-#                else:
-#                    self.pixelPermm = pixelPermm*(self.imW/1920)
-                   
+                print('Computed Image height, Image width: {}, {}'.format(self.imH, self.imW))
+                if(pixelPermm is None):
+                    self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
+                else:
+                    self.pixelPermm = float(pixelPermm)*self.imW/1920
+                    
+    
+                self.mmPerPixel = 1/self.pixelPermm
+                print(self.mmPerPixel)  
 
 
                 print('Pixel per mm : {}'.format(self.pixelPermm))
 
-                self.mmPerPixel = 1/self.pixelPermm
                 
-                print('Pixels per mm: {}'.format(self.pixelPermm))
+                
+               
                 
                 self.PIVfolder = os.path.join(self.path, 'PIVresults_{}px'.format(self.window_size))
             
                 if(not os.path.exists(self.PIVfolder)):
                     os.makedirs(self.PIVfolder)
                 
-            except:
+    
                 
-                print('Warning: No images found corresponding to track data')
+            except Exception as e: 
+                print(e)
+                
+#                print('Warning: No images found corresponding to track data')
                     
             self.scaleFactor = scaleFactor
             if(findDims):
@@ -321,7 +333,7 @@ class gravMachineTrack:
                        
                         root, subFolderName = os.path.split(dirs)
                             
-                        print(subFolderName[0:6])
+                   
                         if('images' in subFolderName):
                            
                            for fileNames in files:
@@ -1158,7 +1170,7 @@ class gravMachineTrack:
     def smoothSignal(self, data, window_time):      # Window is given in seconds
             
             avgWindow = int(window_time*self.samplingFreq)
-            return uniform_filter1d(data, size = avgWindow, mode="nearest")
+            return uniform_filter1d(data, size = avgWindow, mode="reflect")
 #            data = pd.Series(data)
 #            rolling_mean = np.array(data.rolling(window = avgWindow, center = True).mean())
 ##            try:
