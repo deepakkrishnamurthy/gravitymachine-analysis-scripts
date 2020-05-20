@@ -167,14 +167,17 @@ def doPIV(frame_a_color,frame_b_color, dT = 1.0, win_size = 64, overlap = 32, se
 
     return x,y,u,v, sig2noise
 
-def pivPostProcess(u,v,sig2noise,sig2noise_min=1.5,smoothing_param = 0):
+def pivPostProcess(u,v,sig2noise,sig2noise_min=1.3,smoothing_param = 0):
     
-    u, v, mask = openpiv.validation.sig2noise_val( u, v, sig2noise, threshold = sig2noise_min )
-
+    u, v, mask = openpiv.validation.sig2noise_val(u, v, sig2noise, threshold = sig2noise_min )
+    
+    
+    
+    
     print('-'*50)
     print('Percentage of bad vectors: {} %'.format(100*np.count_nonzero(np.isnan(u))/np.prod(u.shape)))
     print('-'*50)    
-    u, v = openpiv.filters.replace_outliers( u, v, method='localmean', max_iter=10, kernel_size=2)
+#    u, v = openpiv.filters.replace_outliers(u, v, method='localmean', max_iter=10, kernel_size=2)
     
 #    (u,v) =(np.flipud(u), np.flipud(v))
     
@@ -182,10 +185,28 @@ def pivPostProcess(u,v,sig2noise,sig2noise_min=1.5,smoothing_param = 0):
     
         (u,v)=(smoothData(u,sigma_smooth=1.5), smoothData(v,sigma_smooth=1.5))
     
-    return u,v
+    return u,v, mask
 
 
-def plotPIVdata(image,x,y,u,v, orgContour = None, Centroids = None, pixelPermm = 1,figname=1,show = 0,saveFileName=None):
+def plotValidvectors(image, x,y, u , v, mask):
+    
+    imH, imW, *rest = np.shape(image)
+    plt.figure()
+    
+    plt.imshow(image,cmap=plt.cm.gray,alpha=1.0,extent = [0,imW,imH, 0])
+
+    # Outlier vectors
+    plt.quiver(x[mask],y[mask],u[mask],v[mask],color='r')
+    # Valid vectors
+    plt.quiver(x[~mask],y[~mask],u[~mask],v[~mask],color='g')
+    
+    plt.show(block=False)
+    plt.pause(0.001)
+
+    
+    
+
+def overlayPIVdata(image,x,y,u,v, orgContour = None, Centroids = None, pixelPermm = 1,figname=1,show = 0,saveFileName=None):
     # Plots the PIV vector field overlaid on the raw image
     imH, imW, *rest = np.shape(image)
     
@@ -203,7 +224,7 @@ def plotPIVdata(image,x,y,u,v, orgContour = None, Centroids = None, pixelPermm =
     U = velMag(u,v)
     
     
-    y = np.flipud(y)
+#    y = np.flipud(y)
     
     fig = plt.figure(figname)
     plt.clf()

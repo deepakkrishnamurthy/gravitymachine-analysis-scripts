@@ -45,18 +45,18 @@ import pandas as pd
 
 trackFile = 'H:/2019 Monterey Trip/Vorticella_GM/2019_08_21/Track4/track000.csv'
 
-Track = GravityMachineTrack.gravMachineTrack(trackFile = trackFile, findDims = True)
+Track = GravityMachineTrack.gravMachineTrack(trackFile = trackFile, organism = 'Sinking agar sphere', condition = 'Vorticella present', findDims = True)
 # PIV frames based on time
 Tmin = 0
 Tmax = 10
 
 # PIV frames based on Image indices
 ImgMin = 828
-nImages = 10
+nImages = 2
 Imgmax = 0
 
 
-def doPIVBatch(Track = None, ImagePairs = None, dT_array = None, win_size = 64, overlap = 32, searchArea = 64, save = False, masking = True):
+def doPIVBatch(Track = None, ImagePairs = None, dT_array = None, win_size = 128, overlap = 64, searchArea = 128, save = False, masking = True):
     
     PIV_Folder = os.path.join(Track.path, 'PIV_data')
     if (save is True):
@@ -70,10 +70,6 @@ def doPIVBatch(Track = None, ImagePairs = None, dT_array = None, win_size = 64, 
     
         config_df.to_csv(os.path.join(PIV_Folder, 'PIV_configs.csv'))
             
-    
-   
-    
-    
     for ii, images in enumerate(ImagePairs):
         
         image_a, image_b = images
@@ -98,8 +94,9 @@ def doPIVBatch(Track = None, ImagePairs = None, dT_array = None, win_size = 64, 
         x,y,u,v, sig2noise = PIV_Functions.doPIV(frame_a_color,frame_b_color, dT = deltaT, win_size = win_size, overlap = overlap, searchArea = searchArea, apply_clahe = False)
         
         
-        u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
+        u, v, mask = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.3, smoothing_param = 0)
 
+        PIV_Functions.plotValidvectors(frame_a_color,x,y,u,v,mask)
         
         u,v = (PIV_Functions.data2RealUnits(data = u,scale = 1/(Track.pixelPermm)), PIV_Functions.data2RealUnits(data = v,scale = 1/(Track.pixelPermm)))
             
@@ -112,7 +109,7 @@ def doPIVBatch(Track = None, ImagePairs = None, dT_array = None, win_size = 64, 
             Contours = np.nan
                 
         # Plot the PIV data
-        PIV_Functions.plotPIVdata(frame_a_color,x,y,u,v, orgContour=Contours, Centroids = None, pixelPermm = Track.pixelPermm)
+        PIV_Functions.overlayPIVdata(frame_a_color,x,y,u,v, orgContour=Contours, Centroids = None, pixelPermm = Track.pixelPermm)
         
         if(save is True):
             with open(saveFile, 'wb') as f:  # Python 3: open(..., 'wb')
@@ -158,8 +155,9 @@ def createImagePairArray(Track, startImage = ImgMin, nImages = nImages, stopImag
    return ImagePairs, dT_array
     
 
+ImagePairs, dT_array = createImagePairArray(Track, startImage=ImgMin, nImages = nImages)
 
-ImagePairs, dT_array = createImagePairArray(Track, startImage=ImgMin, nImages = 10)
+
 
 # PIV analysis of batch of images
 

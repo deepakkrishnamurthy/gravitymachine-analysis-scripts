@@ -1154,7 +1154,7 @@ class msdanalyzer:
 
             # OrgDim_mean, OrgDim_std = self.get_Mean_Std('OrgDim')
             dataFrame_full = pd.DataFrame({'Organism':[],'Condition':[], 'Track':[], 'VelocityX':[],'VelocityY':[],'VelocityZ':[]})
-            
+
             Vx_mean = np.zeros(self.nTracks)
             Vz_mean = np.zeros(self.nTracks)
 
@@ -1163,7 +1163,11 @@ class msdanalyzer:
 
             for ii in range(self.nTracks):
 
+                
+
+                
                 currTrack = self.Tracks[ii]
+                
                 print('...Analyzing Track {} of Duration {} s'.format(ii, np.max(currTrack.T)))
 
 #                AutoTracking = np.array(~currTrack.df['Manual Tracking'], dtype= 'bool')
@@ -1193,9 +1197,9 @@ class msdanalyzer:
                 Vz_std[ii] = np.nanstd(Velocities_Z)
 
 
-                dataFrame_full = dataFrame_full.append(pd.DataFrame({'Organism':np.repeat(self.Organism,dataLen,axis = 0),'Condition':np.repeat(self.Condition,dataLen,axis=0), 'Track': np.repeat(currTrack.trackName ,dataLen,axis=0) , 'VelocityX':Velocities_X,'VelocityY':Velocities_Y,'VelocityZ':Velocities_Z}))
+                dataFrame_full = dataFrame_full.append(pd.DataFrame({'Organism':np.repeat(self.Organism,dataLen,axis = 0),'Condition':np.repeat(self.Condition,dataLen,axis=0), 'Track': np.repeat(currTrack.path ,dataLen,axis=0) , 'VelocityX':Velocities_X,'VelocityY':Velocities_Y,'VelocityZ':Velocities_Z}))
 
-            dataFrame_full.to_csv(os.path.join(self.velocityDistFolder, saveFile))
+                dataFrame_full.to_csv(os.path.join(self.velocityDistFolder, saveFile + currTrack.trackName))
 
             self.Vz_variability_mean = np.nanmean(Vz_std/Vz_mean)
 

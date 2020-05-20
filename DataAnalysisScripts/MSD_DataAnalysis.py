@@ -113,11 +113,11 @@ for ii in range(nUniqueConditions):
 
 # Non-linear least-squares fitting Including Correlated Error
 
-msd1.fitTrajectories(overwrite = True)
+#msd1.fitTrajectories(overwrite = True)
 
 # MSD plots
 
-msd1.plotMSD(figname = 1, plot_fit= True, savefig = True)
+#msd1.plotMSD(figname = 1, plot_fit= True, savefig = True)
 
 #msd1.plotLocalSlope(savefig = True)
         
