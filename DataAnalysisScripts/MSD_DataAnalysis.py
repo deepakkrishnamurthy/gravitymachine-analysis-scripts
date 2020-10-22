@@ -74,6 +74,8 @@ for ii in range(nUniqueConditions):
         
         nTracksSameCondition = len(tracks_sameCondition)
         
+        # Reset the track array: We only want to bin tracks from the same unique condition together
+        TrackArray = []
         for jj in range(nTracksSameCondition):
             
             Track_df = tracks_sameCondition.iloc[jj]
