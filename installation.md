@@ -1,4 +1,4 @@
-# Installation instructions for packages for Squid tracking data analysis.
+# Installation instructions for packages for Gravity Machine tracking data analysis.
 
 ## First install Anaconda 
 
