@@ -36,10 +36,6 @@ rc('font', family='sans-serif')
 rc('font', serif='Helvetica') 
 rc('text', usetex='false') '\\\'
 
-\
-\
-
-\\  
 rcParams.update({'font.size': 26})
 
 path1 = 'E:/HOT317_GravityMachine_1/Day1/withoutBlock_655PM'

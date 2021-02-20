@@ -49,17 +49,12 @@ class gravMachineTrack:
         self.emptyTrack = None
         # Local Time when the track was measured
         self.localTime = localTime
-
         # Total duration of track in seconds
         self.trackDuration = None
-        
         # Whether to use post-processed dataset
         self.use_postprocessed = use_postprocessed
-        
-        
         # Description of track (such as observed cell/organism state). Warning: This may be subjective. Mainly as a book-keeping utility
         self.track_desc = trackDescription
-
         self.overwrite_piv = overwrite_piv
         self.overwrite_velocity = overwrite_velocity
         self.Tmin = Tmin
@@ -68,21 +63,14 @@ class gravMachineTrack:
         self.frame_min = frame_min
         self.frame_max = frame_max
         
-        
         self.trackFile = trackFile  # Full, absolute path to the track csv file being analyzed
-
-
         self.path = None
-        
         self.pixelPermm = None
         self.mmPerPixel= None
-        
         # Opens a Folder and File dialog for choosing the dataset for analysis
         self.openFile(fileName = self.trackFile)
-        
         self.loadMetaData()
-        
-        
+    
         self.initializeTrack()
         
         if(self.emptyTrack is False):
@@ -129,14 +117,6 @@ class gravMachineTrack:
                 self.XposImageAvailable = True
             else:
                 self.XposImageAvailable = False
-                
-                
-            if 'Light Experiment' in self.ColumnNames:
-                self.LightExperiment = self.df['Light Experiment']
-                
-            if 'LED_Intensity' in self.ColumnNames:
-                self.LED_intensity = self.df['LED_Intensity']
-            
             
             # Make T=0 as the start of the track
             self.df['Time'] = self.df['Time'] - self.df['Time'][0]
@@ -222,23 +202,18 @@ class gravMachineTrack:
                 self.overlap = 128
                 self.searchArea = 256
                 
-                print('Computed Image height, Image width: {}, {}'.format(self.imH, self.imW))
-                if(pixelPermm is None):
-                    self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
-                else:
-                    self.pixelPermm = float(pixelPermm)*self.imW/1920
-                    
-    
+#                print('Computed Image height, Image width: {}, {}'.format(self.imH, self.imW))
+#                if(pixelPermm is None):
+#                    self.pixelPermm =  314*(self.imW/720)   # Pixel per mm for TIS camera (DFK 37BUX273) and 720p images
+#                else:
+#                    self.pixelPermm = float(pixelPermm)*self.imW/1920
+                self.pixelPermm 
                 self.mmPerPixel = 1/self.pixelPermm
                 print(self.mmPerPixel)  
 
 
                 print('Pixel per mm : {}'.format(self.pixelPermm))
 
-                
-                
-               
-                
                 self.PIVfolder = os.path.join(self.path, 'PIVresults_{}px'.format(self.window_size))
             
                 if(not os.path.exists(self.PIVfolder)):
@@ -332,8 +307,6 @@ class gravMachineTrack:
                     for dirs, subdirs, files in os.walk(self.path, topdown=False):
                        
                         root, subFolderName = os.path.split(dirs)
-                            
-                   
                         if('images' in subFolderName):
                            
                            for fileNames in files:
@@ -346,18 +319,8 @@ class gravMachineTrack:
                                 if('.csv' in fileNames):
                                     trackFileNames.append(fileNames)
 
-
             self.emptyTrack = False
-        
-    #                if(len(trackFileNames)==0):
-    #                    raise FileNotFoundError('CSV track was not found!')      
-    #                elif(len(trackFileNames)>=1):
-    #                    print('Choose the track file to use!')
-    #                                        
-    #                    trackFile,*rest = QtGui.QFileDialog.getOpenFileName(None, 'Open track file',self.path,"CSV fles (*.csv)")
-    #                    print(trackFile)
-    #                    head,self.trackFile = os.path.split(trackFile)
-    #                    print('Loaded {}'.format(self.trackFile))
+
 
     
     def loadMetaData(self):
