@@ -4,33 +4,40 @@
 Created on Fri Feb  1 01:04:22 2019
 @author: deepak
 """
-import matplotlib.pyplot as plt
 import os
-import scipy
-import pickle
-plt.close("all")
 import numpy as np
 import pandas as pd
-import rangeslider_functions
-import cv2
-
+import scipy
 import scipy.interpolate as interpolate
-
 from scipy.ndimage.filters import uniform_filter1d
-import imageprocessing.imageprocessing_utils as ImageProcessing
+import pickle
+import matplotlib.pyplot as plt
+import seaborn as sns
+plt.close("all")
+import cv2
+import GravityMachine.imageprocessing.imageprocessing_utils as ImageProcessing
+from GravityMachine._def import VARIABLE_MAPPING, units
 
-import PIVanalysis.PIV_Functions as PIV_Functions
 
-imgFormat = ['.png', '.svg']
-# Map between the header names in the CSV file and the internal variable names
-VARIABLE_MAPPING = {'Time':'Time', 'X':'Xobj','Y':'Yobj','Z':'ZobjWheel','Image name':'Image name', 'X_image':'Xobj_image', 'Z_image':'Zobj'}
-class GravityMachineTrack:
+try:
+    import rangeslider_functions
+except:
+    print('Range slider functions not found')
+
+try:
+    import PIVanalysis.PIV_Functions as PIV_Functions
+except:
+    print('PIV modules not found')
+
+
+class GravityMachineAnalysis:
 
     def __init__(self, track_folder = None, track_file = None, organism = 'Organism', condition = 'Condition', Tmin=0, Tmax=0, 
-        pixelPermm = None, flip_z = False, rescale_time = True):
+        image_streams = None, pixelPermm = None, flip_z = False, rescale_time = True):
         """ Gravity Machine Analysis object for loading, interacting, analyzing and plotting Gravity Machine data.
 
         """
+        self.data = {}
         self.Organism = organism
         self.Condition = condition
 
@@ -39,6 +46,8 @@ class GravityMachineTrack:
         
         self.track_file = track_file  # Full, absolute path to the track csv file being analyzed
         self.track_folder = track_folder
+
+        self.image_streams = image_streams  # Image streams whose images are used in the analysis. This can be a list for mutiple image streams. 
 
         self.pixelPermm = None
       
@@ -51,17 +60,19 @@ class GravityMachineTrack:
             self.df[VARIABLE_MAPPING['Time']] = self.df[VARIABLE_MAPPING['Time']] - self.df[VARIABLE_MAPPING['Time']][0]
         
         if(Tmax == 0 or Tmax is None):
-            Tmax = np.max(self.df[VARIABLE_HEADER_MAPPING['Time']])
+            Tmax = np.max(self.df[VARIABLE_MAPPING['Time']])
         
         if(Tmin is not None and Tmax is not None):
             # Crop the trajectory
-            self.df = self.df.loc[(self.df[VARIABLE_HEADER_MAPPING['Time']]>=Tmin) & (self.df[VARIABLE_HEADER_MAPPING['Time']] <= Tmax)]
+            self.df = self.df.loc[(self.df[VARIABLE_MAPPING['Time']]>=Tmin) & (self.df[VARIABLE_MAPPING['Time']] <= Tmax)]
         
         # Internal representation of the track data
         for key in VARIABLE_MAPPING:
-            self.data[key] = np.array(self.df[VARIABLE_HEADER_MAPPING[key]])
+            self.data[key] = np.array(self.df[VARIABLE_MAPPING[key]])
             
         self.trackLen = len(self.data)
+
+        self.regularize_time_intervals()
 
     def set_data(self, data):
         """ Alternative means of loading data from a user supplied data-frame.
@@ -109,55 +120,46 @@ class GravityMachineTrack:
             metadata_file = os.path.join(self.track_folder, 'metadata.csv')
             
             if(os.path.exists(metadata_file)):
-                
+                print(50*'*')
                 print('Loading metadata file ...')
                 metadata_df = pd.read_csv(metadata_file)
                 
                 for key in metadata:
                     if(key in metadata_df.columns):
                         metadata[key] = metadata_df[key][0]
+
+            
+            print('Loaded metadata...')
+            print(metadata)
+            print(50*'*')
     
     def build_image_dict(self):
         """
             Builds a dictionary with image names for each image stream so the image can be loaded from the appropriate sub-directory just based in the image name.
         """
-        
-        # print('Opening dataset ...')
+        if(self.image_streams is not None):
+            self.image_dicts = {key:{} for key in self.image_streams} # Create a nested dictionary to store the paths for image stream
 
-        # self.path contains the absolute path to the track file folder
-        self.path, self.trackFile = os.path.split(fileName)
-         # Contains the root-folder containing the folder tracks
-        self.root, *rest = os.path.split(self.path) 
-        self.trackFolder, self.trackName = os.path.split(self.path)       
-#        self.path = QtGui.QFileDialog.getExistingDirectory(None, "Open dataset folder")
-        
-        # File name for saving the analyzed data
-        self.analysis_save_path = os.path.join(self.path, self.trackFile[0:-4]+'_{}_{}'.format(round(self.Tmin), round(self.Tmax)) + '_analysis.csv')
-        
-        
-        print("Path : {}".format(self.path))
-        
-        if(len(self.path)>0):
-            self.image_dict = {}
-            
-            trackFileNames = []
-            if os.path.exists(self.path):
-    
+         
+            if os.path.exists(self.track_folder):
+
+                for image_stream_name in self.image_streams:
                 # Walk through the folders and identify ones that contain images
-                for dirs, subdirs, files in os.walk(self.path, topdown=False):
-                   
-                    root, subFolderName = os.path.split(dirs)
-                    if('images' in subFolderName):
+                    for dirs, subdirs, files in os.walk(self.track_folder, topdown=False):
                        
-                       for fileNames in files:
-                           key = fileNames
-                           value = subFolderName
-                           self.image_dict[key]=value
-    
-                    if(os.path.normpath(dirs) == os.path.normpath(self.path)):
-                        for fileNames in files:
-                            if('.csv' in fileNames):
-                                trackFileNames.append(fileNames)
+                        root, subFolderName = os.path.split(dirs)
+                        print('Dir: ',dirs)
+                        print('Subdir: ',subdirs)
+                        for file in files: 
+                            # Find folders that contain the image stream we want to load. For backward compatibility this also checks all folders starting with 'images' 
+                            if(file.lower().endswith('tif') and (((image_stream_name in dirs) or ('images' in dirs)))):
+                                key = file
+                                value = dirs
+                                self.image_dict[image_stream_name][key] = value   
+        else:
+            prinr('No image streams found')
+            
+          
 
 
     def saveAnalysisData(self, overwrite = True):
@@ -403,9 +405,6 @@ class GravityMachineTrack:
         print('Organism Minor dimension {} mm'.format(self.OrgMinDim))
         print('*'*50)
                         
-
-  
-    
     def velocity_central_diff(self):
 
         for i in range(0,self.trackLen):
@@ -421,15 +420,12 @@ class GravityMachineTrack:
                 
                 self.Theta_dot[i] = (self.data['ThetaWheel'][i+1]-self.data['ThetaWheel'][i])/(self.data['Time'][i+1]-self.data['Time'][i])
 
-                
                 if self.XposImageAvailable:
                     # Note: This will be Vx_objLab for a setup where the optical FOV is fixed in the lab reference
                     # > GM v2.0 and higher
 #                    self.Vx_objStage[i] = (self.data[self.XobjImage_name][i+1]-self.data[self.XobjImage_name][i])/(self.data['Time'][i+1]-self.data['Time'][i])
                     self.Vx_objLab[i] = (self.data[self.XobjImage_name][i+1]-self.data[self.XobjImage_name][i])/(self.data['Time'][i+1]-self.data['Time'][i])
 
-
-            
             elif(i==self.trackLen-1):
                 # Backward difference at the end points
                 self.Vx[i] = (self.data[self.Xobj_name][i]-self.data[self.Xobj_name][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
@@ -444,8 +440,6 @@ class GravityMachineTrack:
 #                    self.Vx_objStage[i] = (self.data[self.XobjImage_name][i]-self.data[self.XobjImage_name][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
                     self.Vx_objLab[i] = (self.data[self.XobjImage_name][i]-self.data[self.XobjImage_name][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
 
-        
-                
             else:
                 # Central difference for all other points
                 self.Vx[i] = (self.data[self.Xobj_name][i+1]-self.data[self.Xobj_name][i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
@@ -857,7 +851,8 @@ class GravityMachineTrack:
 
     #--------------------------------------------------------------------------       
     # Signal Processing Functions
-    #--------------------------------------------------------------------------       
+    #--------------------------------------------------------------------------  
+    # @@@ Need to modift and use the pandas based method @@@     
     def smoothSignal(self, data, window_time):      # Window is given in seconds
             
             avgWindow = int(window_time*self.samplingFreq)
@@ -869,9 +864,23 @@ class GravityMachineTrack:
 #            except:
 #                return pd.rolling_mean(data, avgWindow, min_periods = 1, center = True)
           
+    #--------------------------------------------------------------------------
+    # Plotting functions
+    #--------------------------------------------------------------------------
 
+    def plot_displacement_timeseries(self, save = False):
 
- 
+        title = 'Displacement time series'
+        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, figsize = (8,12))
+        ax1.set_title(title)
+        sns.lineplot(x = self.data['Time'], y = self.data['X'], color = 'r', linewidth = 1, label = 'X', ax = ax1, ci = None)
+        ax1.set_ylabel('X '+units['X'])
+        sns.lineplot(x = self.data['Time'], y = self.data['Y'], color = 'g', linewidth = 1, label = 'Y', ax = ax2, ci = None)
+        ax2.set_ylabel('Y '+units['Y'])
+        sns.lineplot(x = self.data['Time'], y = self.data['Z'], color = 'b', linewidth = 1, label = 'Z', ax = ax3, ci = None)
+        ax3.set_ylabel('Z '+units['Z'])
+        ax3.set_xlabel('Time' + units['Time'])
+        plt.show()
 
 
 
