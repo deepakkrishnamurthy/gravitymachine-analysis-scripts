@@ -1,5 +1,14 @@
-
-units = {'Time':'(s)', 'X':'(mm)','Y':'(mm)','Z':'(mm)'}
+"""	General definitions
+   	Gravity machine variable naming:
+	Time: Elapsed time in seconds
+	X: X displacement (radial axis)
+	Y: Y displacement (optical axis)
+	Z: Z displacement (vertical)
+	V_x: X velocity
+	V_z: Y velocity
+	V_y: Z velocity
+"""
+units = {'Time':'(s)', 'X':'(mm)','Y':'(mm)','Z':'(mm)', 'V_x': '(mm/s)','V_y': '(mm/s)','V_z': '(mm/s)', 'Theta':'(rad)'}
 imgFormat = ['.png', '.svg']
 # Map between the header names in the CSV file and the internal variable names
 # X_objStage  Y_objStage  Z_objStage  Theta_stage X_image Z_image

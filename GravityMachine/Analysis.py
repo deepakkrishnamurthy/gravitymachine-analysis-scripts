@@ -17,7 +17,9 @@ plt.close("all")
 import cv2
 import GravityMachine.imageprocessing.imageprocessing_utils as ImageProcessing
 from GravityMachine._def import VARIABLE_MAPPING, units
-
+import GravityMachine.utils as utils
+import imp
+imp.reload(utils)
 
 try:
     import rangeslider_functions
@@ -73,6 +75,15 @@ class GravityMachineAnalysis:
         self.trackLen = len(self.data)
 
         self.regularize_time_intervals()
+        self.initialize_data()
+
+    def initialize_data(self):
+        """
+            Initialize derived data
+        """
+        self.data['V_x'] = None
+        self.data['V_y'] = None
+        self.data['V_z'] = None
 
     def set_data(self, data):
         """ Alternative means of loading data from a user supplied data-frame.
@@ -158,6 +169,13 @@ class GravityMachineAnalysis:
                                 self.image_dict[image_stream_name][key] = value   
         else:
             prinr('No image streams found')
+
+    def compute_velocity(self):
+
+        self.data['V_x'] = utils.velocity_central_diff(self.data['Time'], self.data['X'])
+        self.data['V_y'] = utils.velocity_central_diff(self.data['Time'], self.data['Y'])
+        self.data['V_z'] = utils.velocity_central_diff(self.data['Time'], self.data['Z'])
+
             
           
 
@@ -404,120 +422,7 @@ class GravityMachineAnalysis:
         print('Organism Major dimension {} mm'.format(self.OrgMajDim))
         print('Organism Minor dimension {} mm'.format(self.OrgMinDim))
         print('*'*50)
-                        
-    def velocity_central_diff(self):
-
-        for i in range(0,self.trackLen):
-                
-                
-            if(i==0):
-                # Forward difference at the start points
-                self.Vx[i] = (self.data[self.Xobj_name][i+1]-self.data[self.Xobj_name][i])/(self.data['Time'][i+1]-self.data['Time'][i])
-                self.Vy[i] = (self.data[self.Yobj_name][i+1]-self.data[self.Yobj_name][i])/(self.data['Time'][i+1]-self.data['Time'][i])
-                self.Vz[i] = (self.data['ZobjWheel'][i+1]-self.data['ZobjWheel'][i])/(self.data['Time'][i+1]-self.data['Time'][i])
-                
-                self.Vz_objLab[i] = (self.data[self.Zobj_name][i+1]-self.data[self.Zobj_name][i])/(self.data['Time'][i+1]-self.data['Time'][i])
-                
-                self.Theta_dot[i] = (self.data['ThetaWheel'][i+1]-self.data['ThetaWheel'][i])/(self.data['Time'][i+1]-self.data['Time'][i])
-
-                if self.XposImageAvailable:
-                    # Note: This will be Vx_objLab for a setup where the optical FOV is fixed in the lab reference
-                    # > GM v2.0 and higher
-#                    self.Vx_objStage[i] = (self.data[self.XobjImage_name][i+1]-self.data[self.XobjImage_name][i])/(self.data['Time'][i+1]-self.data['Time'][i])
-                    self.Vx_objLab[i] = (self.data[self.XobjImage_name][i+1]-self.data[self.XobjImage_name][i])/(self.data['Time'][i+1]-self.data['Time'][i])
-
-            elif(i==self.trackLen-1):
-                # Backward difference at the end points
-                self.Vx[i] = (self.data[self.Xobj_name][i]-self.data[self.Xobj_name][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-                self.Vy[i] = (self.data[self.Yobj_name][i]-self.data[self.Yobj_name][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-                self.Vz[i] = (self.data['ZobjWheel'][i]-self.data['ZobjWheel'][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-                
-                self.Vz_objLab[i] = (self.data[self.Zobj_name][i]-self.data[self.Zobj_name][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-                
-                self.Theta_dot[i] = (self.data['ThetaWheel'][i]-self.data['ThetaWheel'][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-
-                if self.XposImageAvailable:
-#                    self.Vx_objStage[i] = (self.data[self.XobjImage_name][i]-self.data[self.XobjImage_name][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-                    self.Vx_objLab[i] = (self.data[self.XobjImage_name][i]-self.data[self.XobjImage_name][i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-
-            else:
-                # Central difference for all other points
-                self.Vx[i] = (self.data[self.Xobj_name][i+1]-self.data[self.Xobj_name][i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-                self.Vy[i] = (self.data[self.Yobj_name][i+1]-self.data[self.Yobj_name][i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-                self.Vz[i] = (self.data['ZobjWheel'][i+1]-self.data['ZobjWheel'][i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-                
-                self.Vz_objLab[i] = (self.data[self.Zobj_name][i+1]-self.data[self.Zobj_name][i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-                
-                
-                self.Theta_dot[i] = (self.data['ThetaWheel'][i+1]-self.data['ThetaWheel'][i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-
-                if self.XposImageAvailable:
-#                    self.Vx_objStage[i] = (self.data[self.XobjImage_name][i + 1]-self.data[self.XobjImage_name][i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-                    self.Vx_objLab[i] = (self.data[self.XobjImage_name][i + 1]-self.data[self.XobjImage_name][i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-
-
-
-
-    def computeVelocity(self):
-        
-        self.Vx = np.zeros(self.trackLen)
-        self.Vy = np.zeros(self.trackLen)
-        self.Vz = np.zeros(self.trackLen)
-        self.Vz_objLab = np.zeros(self.trackLen)
-        # Velocity of the object in the reference frame of the X-stage (GM v<2.0)
-#        self.Vx_objStage = np.zeros(self.trackLen)
-
-        # Velocity of the object in reference frame of the fixed optical FOV (GM v>2.0)
-        self.Vx_objLab = np.zeros(self.trackLen)
-        self.Theta_dot = np.zeros(self.trackLen)
-        
-        # If using post-procssed data, then load velocities from file
-        if(self.use_postprocessed):
-            self.Vx = self.data['Xvel']
-            self.Vy = self.data['Yvel']
-            self.Vz = self.data['Zvel']
-            
-            
-        else:
-            # Try to calculate the velocities
-            self.velocity_central_diff()
-            
-        # Smooth the velocity data to only keep frequencies 10 times lower than the sampling frequency (low-pass filter)
-        self.Vx_smooth = self.smoothSignal(self.Vx, window_time = self.window_time)
-        self.Vy_smooth = self.smoothSignal(self.Vy, window_time = self.window_time)
-        self.Vz_smooth = self.smoothSignal(self.Vz, window_time = self.window_time)
-        self.Vz_objLab_smooth = self.smoothSignal(self.Vz_objLab, window_time = self.window_time)
-        self.Theta_dot_smooth = self.smoothSignal(self.Theta_dot, window_time = self.window_time)
-        self.Speed = (self.Vx_smooth**2 + self.Vy_smooth**2 + self.Vz_smooth**2)**(1/2)
-        self.Speed_z = (self.Vz_smooth**2)**(1/2)
-        
-    
-    def computeAccln(self):
-        
-        self.Theta_ddot = np.zeros(self.trackLen)
-        
-        self.a_z = np.zeros(self.trackLen)
-        
-        for i in range(0,self.trackLen):
-            
-            if(i==0):
-                # Forward difference at the start points
-                
-                self.a_z[i] = (self.Vz[i+1]-self.Vz[i])/(self.data['Time'][i+1]-self.data['Time'][i])
-                self.Theta_ddot[i] = (self.Theta_dot[i+1]-self.Theta_dot[i])/(self.data['Time'][i+1]-self.data['Time'][i])
-
-            
-            elif(i==self.trackLen-1):
-                # Backward difference at the end points
-                self.a_z[i] = (self.Vz[i]-self.Vz[i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-                self.Theta_ddot[i] = (self.Theta_dot[i]-self.Theta_dot[i-1])/(self.data['Time'][i]-self.data['Time'][i-1])
-            else:
-                # Central difference for all other points
-                self.a_z[i] = (self.Vz[i+1]-self.Vz[i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-                self.Theta_ddot[i] = (self.Theta_dot[i+1]-self.Theta_dot[i-1])/(self.data['Time'][i+1]-self.data['Time'][i-1])
-    
-        self.a_z = self.smoothSignal(self.a_z, self.window_time)
-        self.Theta_ddot = self.smoothSignal(self.Theta_ddot, self.window_time)
+                    
 
     def computeVelocityOrientation(self):
         
@@ -881,6 +786,22 @@ class GravityMachineAnalysis:
         ax3.set_ylabel('Z '+units['Z'])
         ax3.set_xlabel('Time' + units['Time'])
         plt.show()
+
+    def plot_velocity_timeseries(self, save = False):
+
+        title = 'Velocity time series'
+        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, figsize = (8,12))
+        ax1.set_title(title)
+        sns.lineplot(x = self.data['Time'], y = self.data['V_x'], color = 'magenta', linewidth = 1, ax = ax1, ci = None)
+        ax1.set_ylabel('X velocity '+units['V_x'])
+        sns.lineplot(x = self.data['Time'], y = self.data['V_y'], color = 'darkolivegreen', linewidth = 1, ax = ax2, ci = None)
+        ax2.set_ylabel('Y velocity'+units['V_y'])
+        sns.lineplot(x = self.data['Time'], y = self.data['V_z'], color = 'darkblue', linewidth = 1, ax = ax3, ci = None)
+        ax3.set_ylabel('Z velocity'+units['V_z'])
+        ax3.set_xlabel('Time' + units['Time'])
+        plt.show()
+
+
 
 
 
