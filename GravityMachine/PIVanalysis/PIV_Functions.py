@@ -12,11 +12,6 @@ import openpiv.process
 import numpy as np
 import openpiv.validation
 import openpiv.filters
-import openpiv.tools
-import openpiv.process
-import openpiv.scaling
-import openpiv.validation
-import openpiv.filters
 from openpiv import  pyprocess
 import cv2
 import matplotlib.pyplot as plt
