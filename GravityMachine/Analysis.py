@@ -20,6 +20,7 @@ from GravityMachine._def import VARIABLE_MAPPING, units
 import GravityMachine.utils as utils
 import imp
 imp.reload(utils)
+from tqdm import tqdm
 
 try:
 	import GravityMachine.rangeslider_functions as rangeslider_functions 
@@ -27,7 +28,7 @@ except:
 	print('Range slider functions not found')
 
 try:
-	import PIVanalysis.PIV_Functions as PIV_Functions
+	import GravityMachine.PIVanalysis.PIV_Functions as PIV_Functions
 except:
 	print('PIV modules not found')
 
@@ -47,7 +48,7 @@ class GravityMachineTrack:
 		""" Gravity Machine Analysis object for loading, interacting, analyzing and plotting Gravity Machine data.
 
 		"""
-		self.data = {}
+		self.data = pd.DataFrame({})
 		self.Organism = organism
 		self.Condition = condition
 
@@ -131,9 +132,12 @@ class GravityMachineTrack:
 
 		self.data = data
 
-	def create_plot_folder(self):
-		if(not os.path.exists(self.plots_folder)):
-			os.makedirs(self.plots_folder)
+	def initialize_piv_analysis(self):
+		self.PIVfolder = os.path.join(self.track_folder, 'PIV_data')
+		if(not os.path.exists(self.PIVfolder)):
+			os.makedirs(self.PIVfolder)
+
+		self.piv_settings = {'window size': 64, 'overlap': 32, 'search area':64}
 
 	def regularize_time_intervals(self):
 		""" Resample the data on a regular time grid
@@ -203,27 +207,39 @@ class GravityMachineTrack:
 		else:
 			print('No image streams found')
 
-	def compute_velocity(self):
+	def compute_velocity(self, smooth_window = None):
 		""" Computes velocity of tracked object using a central-difference scheme. 
 			Other methods can also be implemented.
 
+			smooth_window: Sliding time window (in s) over which to average velocity.
+
 		"""
-		self.data['V_x'] = utils.velocity_central_diff(self.data['Time'], self.data['X'])
-		self.data['V_y'] = utils.velocity_central_diff(self.data['Time'], self.data['Y'])
-		self.data['V_z'] = utils.velocity_central_diff(self.data['Time'], self.data['Z'])
+		self.data['V_x'] = utils.velocity_central_diff(self.data['Time'][:], self.data['X'][:])
+		self.data['V_y'] = utils.velocity_central_diff(self.data['Time'][:], self.data['Y'][:])
+		self.data['V_z'] = utils.velocity_central_diff(self.data['Time'][:], self.data['Z'][:])
 
 		# Object velocity relative to image reference frame
-		if(self.data['X_image'] is not None):
-			self.data['V_x_image'] = utils.velocity_central_diff(self.data['Time'], self.data['X_image'])
+		if(self.data['X_image'][0] is not None):
+			self.data['V_x_image'] = utils.velocity_central_diff(self.data['Time'][:], self.data['X_image'][:])
 		else:
 			# If the object position realtive to image is unvailable then assume it is zero.
 			self.data['V_x_image'] = np.zeros(self.trackLen)
 
 
-		if(self.data['Z_image'] is not None):
-			self.data['V_z_image'] = utils.velocity_central_diff(self.data['Time'], self.data['Z_image'])
+		if(self.data['Z_image'][0] is not None):
+			self.data['V_z_image'] = utils.velocity_central_diff(self.data['Time'][:], self.data['Z_image'][:])
 		else:
 			self.data['V_z_image'] = np.zeros(self.trackLen)
+
+
+		if(smooth_window is not None):
+
+			average_dt = np.nanmean(self.data['Time'][1:] - self.data['Time'][:-1])
+
+			window_size = int(smooth_window/average_dt)
+
+			self.data['V_x'] = np.array(self.data['V_x'].rolling(window = window_size, center = True).mean())
+
 
 	
 	def create_image_index(self):
@@ -464,9 +480,9 @@ class GravityMachineTrack:
 			print('-'*50)
 			print('Analyzing Frame pairs: {} and {} \n'.format(image_a,image_b))
 			print('-'*50)
-			x,y,u,v, sig2noise = PIV_Functions.doPIV(frame_a_color,frame_b_color, dT = deltaT, win_size = self.window_size, overlap = self.overlap, searchArea = self.searchArea, apply_clahe = False)
+			x,y,u,v, sig2noise = PIV_Functions.doPIV(frame_a_color,frame_b_color, dT = deltaT, win_size = self.piv_settings['window size'], overlap = self.piv_settings['overlap'], searchArea = self.piv_settings['search area'], apply_clahe = False)
 			
-			u, v = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
+			u, v, mask = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
 			u,v = (PIV_Functions.data2RealUnits(data = u,scale = 1/(self.pixelPermm)), PIV_Functions.data2RealUnits(data = v,scale = 1/(self.pixelPermm)))
 			#--------------------------------------------------------------------------
 			# Threshold the image to extract the object regions
@@ -490,6 +506,8 @@ class GravityMachineTrack:
 			pklFile = saveFile
 			x,y,u,v,Contours = PIV_Functions.readPIVdata(pklFile)
 			print(np.nanmean(u+v))
+			PIV_Functions.overlayPIVdata(frame_a_color, x, y, u, v, Centroids = obj_position)
+
 		   
 #        Centroids = PIV_Functions.findCentroids(Contours)
 #        plt.figure()
@@ -537,7 +555,7 @@ class GravityMachineTrack:
 		else:
 			pass
 		# Plot the vectors
-		PIV_Functions.plotPIVdata(frame_a_color, x, y, u, v, Centroids = obj_position)
+		PIV_Functions.overlayPIVdata(frame_a_color, x, y, u, v, Centroids = obj_position)
 		# Find the mean velocity
 		u_avg, v_avg = (np.nanmean(u), np.nanmean(v))
 		u_std, v_std = (np.nanstd(u), np.nanstd(v))
@@ -563,13 +581,12 @@ class GravityMachineTrack:
 		self.fluid_velocity_file = 'fluid_velocity_timeseries_'+ str(self.Tmin)+'_' + str(self.Tmax) + '.csv'
 		self.fluid_velocity_path = os.path.join(self.fluid_velocity_folder, self.fluid_velocity_file)
 
-		self.PIVfolder = os.path.join(self.track_folder, 'PIV_data')
+		self.initialize_piv_analysis()
 
 		if(not os.path.exists(self.fluid_velocity_folder)):
 			os.makedirs(self.fluid_velocity_folder)
 
-		if(not os.path.exists(self.PIVfolder)):
-			os.makedirs(self.PIVfolder)
+		
 
 		if(not os.path.exists(self.fluid_velocity_path) or overwrite_velocity):
 			
@@ -578,15 +595,15 @@ class GravityMachineTrack:
 			n_image_pairs = len(self.imageIndex)-1
 
 			
-			u_avg_array = np.zeros(n_image_pairs)
-			v_avg_array = np.zeros(n_image_pairs)
-			u_std_array = np.zeros(n_image_pairs)
-			v_std_array = np.zeros(n_image_pairs)
+			self.u_avg_array = np.zeros(n_image_pairs)
+			self.v_avg_array = np.zeros(n_image_pairs)
+			self.u_std_array = np.zeros(n_image_pairs)
+			self.v_std_array = np.zeros(n_image_pairs)
 			image_pairs = []
 			self.imageIndex_array = np.zeros(n_image_pairs, dtype='int')
 			Time_array = np.zeros(n_image_pairs)
 			
-			for ii in range(n_image_pairs):
+			for ii in tqdm(range(n_image_pairs)):
 						 
 				imageindex_a = self.imageIndex[ii] 
 				imageindex_b = self.imageIndex[ii + 1]
@@ -597,7 +614,7 @@ class GravityMachineTrack:
 				image_a = self.data['Image name'][imageindex_a]
 				image_b = self.data['Image name'][imageindex_b]
 
-				image_pairs.append((imag_a, image_b))
+				image_pairs.append((image_a, image_b))
 				
 				try:
 					obj_position = (self.imW/2 - round(self.data['X_image'][imageindex_a]*self.pixelPermm), self.imH/2 - round(self.data['Z_image'][imageindex_a]*self.pixelPermm))
@@ -630,23 +647,23 @@ class GravityMachineTrack:
 					print(image_b)
 					
 					dT = self.data['Time'][imageindex_b] - self.data['Time'][imageindex_a]
-					u_avg_array[ii], v_avg_array[ii], u_std_array[ii], v_std_array[ii] = self.compute_background_fluid_velocity(image_a,image_b,deltaT = dT, masking = masking, obj_position = obj_position, obj_size = self.obj_diameter, overwrite_piv = self.overwrite_piv)
+					self.u_avg_array[ii], self.v_avg_array[ii], self.u_std_array[ii], self.v_std_array[ii] = self.compute_background_fluid_velocity(image_a,image_b,deltaT = dT, masking = masking, obj_position = obj_position, obj_size = self.obj_diameter, overwrite_piv = False)
 				 
 				# If either of those images do not exist, assume that the velocity remains constant over the missing frames
 				elif(not image_a_exists or not image_b_exists):
 					print('One or more of image pair not found...')
 					print('Checking for next image index...')
-					u_avg_array[ii], v_avg_array[ii], u_std_array[ii], v_std_array[ii] = u_avg_array[ii-1], v_avg_array[ii-1], u_std_array[ii-1], v_std_array[ii-1] 
+					self.u_avg_array[ii], self.v_avg_array[ii], self.u_std_array[ii], self.v_std_array[ii] = u_avg_array[ii-1], self.v_avg_array[ii-1], self.u_std_array[ii-1], self.v_std_array[ii-1] 
 					continue
 			   
 			
 			# with open(self.FluidVelocitySavePath, 'wb') as f:  # Python 3: open(..., 'wb')
-			#         pickle.dump((self.imageIndex_array, self.u_avg_array, self.v_avg_array, self.u_std_array, self.v_std_array), f)
+			#         pickle.dump((self.imageIndex_array, self.u_avg_array, self.v_avg_array, self.self.u_std_array, self.self.v_std_array), f)
 			
 			# Save the fluid velocity time series into a CSV file
-		  
-			df_fluid_velocity = pd.DataFrame({'Time': Time_array, 'Image pairs': image_pairs,  'fluid velocity X mean':u_avg_array, 'fluid velocity Z mean':v_avg_array, 'fluid velocity X std':u_std_array, 'fluid velocity Z std':v_std_array})
+			df_fluid_velocity = pd.DataFrame({'Time': Time_array, 'Image pairs': image_pairs,  'fluid velocity X mean':self.u_avg_array, 'fluid velocity Z mean':self.v_avg_array, 'fluid velocity X std':self.u_std_array, 'fluid velocity Z std':self.v_std_array})
 
+			df_fluid_velocity.to_csv('FluidVelocityTimeseries_{}_{}'.format(self.Tmin, self.Tmax))
 			
 		else:
 			print("Fluid time series found! Loading ...")
@@ -655,7 +672,7 @@ class GravityMachineTrack:
 
 
 			# with open(self.FluidVelocitySavePath, 'rb') as f:  # Python 3: open(..., 'wb')
-			#         self.imageIndex_array, self.u_avg_array, self.v_avg_array, self.u_std_array, self.v_std_array = pickle.load(f)
+			#         self.imageIndex_array, self.u_avg_array, self.v_avg_array, self.self.u_std_array, self.self.v_std_array = pickle.load(f)
 				
 				
   

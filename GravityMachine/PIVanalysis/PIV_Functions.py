@@ -171,9 +171,6 @@ def pivPostProcess(u,v,sig2noise,sig2noise_min=1.3,smoothing_param = 0):
     
     u, v, mask = openpiv.validation.sig2noise_val(u, v, sig2noise, threshold = sig2noise_min )
     
-    
-    
-    
     print('-'*50)
     print('Percentage of bad vectors: {} %'.format(100*np.count_nonzero(np.isnan(u))/np.prod(u.shape)))
     print('-'*50)    
