@@ -1,5 +1,6 @@
 # General utility functions
 import numpy as np
+import scipy
 
 def velocity_central_diff(time, data):
         
@@ -26,7 +27,7 @@ def velocity_central_diff(time, data):
     return velocity
 
 
-def compute_displacement_from_velocity(self, x_data = None, y_data = None):
+def compute_displacement_from_velocity(x_data = None, y_data = None):
         """ 
             Compute the displacement by integrating a velocity time series. Uses trapezoidal rule for integration.
         """

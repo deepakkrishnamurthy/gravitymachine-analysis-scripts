@@ -44,7 +44,7 @@ VARIABLE_MAPPING = {'Time':'Time', 'X':'Xobj','Y':'Yobj','Z':'ZobjWheel','Image 
 class GravityMachineTrack:
 
 	def __init__(self, track_folder = None, track_file = None, organism = 'Organism', condition = 'Condition', Tmin=0, Tmax=0, 
-		image_streams = 'Image name', pixelPermm = 314, flip_z = False, rescale_time = True):
+		image_streams = 'Image name', pixelPermm = 314, flip_z = False, rescale_time = True, rescale_z = True):
 		""" Gravity Machine Analysis object for loading, interacting, analyzing and plotting Gravity Machine data.
 
 		"""
@@ -76,7 +76,7 @@ class GravityMachineTrack:
 		assert('Time' in self.ColumnNames)
 
 		if(rescale_time == True):
-			self.df[VARIABLE_MAPPING['Time']] = self.df[VARIABLE_MAPPING['Time']] - self.df[VARIABLE_MAPPING['Time']][0]
+			self.df[VARIABLE_MAPPING['Time']] = self.df[VARIABLE_MAPPING['Time']] - self.df[VARIABLE_MAPPING['Time']][self.df.index[0]]
 		
 		if(Tmax == 0 or Tmax is None):
 			Tmax = np.max(self.df[VARIABLE_MAPPING['Time']])
@@ -85,6 +85,9 @@ class GravityMachineTrack:
 			# Crop the trajectory
 			self.df = self.df.loc[(self.df[VARIABLE_MAPPING['Time']]>=Tmin) & (self.df[VARIABLE_MAPPING['Time']] <= Tmax)]
 
+		# Since the Z trajectory has no physical limits, rescale it to set z=0 for the start of the track
+		if(rescale_z == True):
+			self.df[VARIABLE_MAPPING['Z']] = self.df[VARIABLE_MAPPING['Z']] - self.df[VARIABLE_MAPPING['Z']][self.df.index[0]]
 		# Internal representation of the track data
 		for key in VARIABLE_MAPPING:
 			if(VARIABLE_MAPPING[key] in self.ColumnNames):
@@ -661,92 +664,62 @@ class GravityMachineTrack:
 			#         pickle.dump((self.imageIndex_array, self.u_avg_array, self.v_avg_array, self.self.u_std_array, self.self.v_std_array), f)
 			
 			# Save the fluid velocity time series into a CSV file
-			df_fluid_velocity = pd.DataFrame({'Time': Time_array, 'Image pairs': image_pairs,  'fluid velocity X mean':self.u_avg_array, 'fluid velocity Z mean':self.v_avg_array, 'fluid velocity X std':self.u_std_array, 'fluid velocity Z std':self.v_std_array})
+			df_fluid_velocity = pd.DataFrame({'Time': Time_array, 'Image pairs': image_pairs, 'Image index': self.imageIndex_array, 'fluid velocity X mean':self.u_avg_array, 'fluid velocity Z mean':self.v_avg_array, 'fluid velocity X std':self.u_std_array, 'fluid velocity Z std':self.v_std_array})
 
-			df_fluid_velocity.to_csv('FluidVelocityTimeseries_{}_{}'.format(self.Tmin, self.Tmax))
+			df_fluid_velocity.to_csv(self.fluid_velocity_path)
 			
 		else:
 			print("Fluid time series found! Loading ...")
 			# Load data from the CSV file
 			df_fluid_velocity = pd.read_csv(self.fluid_velocity_path)
+			self.u_avg_array = df_fluid_velocity['fluid velocity X mean']
+			self.v_avg_array = df_fluid_velocity['fluid velocity Z mean']
+			self.u_std_array = df_fluid_velocity['fluid velocity X std']
+			self.v_std_array = df_fluid_velocity['fluid velocity Z std']
+			self.imageIndex_array = df_fluid_velocity['Image index']
 
 
 			# with open(self.FluidVelocitySavePath, 'rb') as f:  # Python 3: open(..., 'wb')
 			#         self.imageIndex_array, self.u_avg_array, self.v_avg_array, self.self.u_std_array, self.self.v_std_array = pickle.load(f)
 				
-				
-  
-# 	def compute_fluid_relative_disp(self, overwrite_flag = False, save = False):
-# 		 """ Computes the object's displacement relative to the fluid.
-# 			Prequisites: 
-# 			- Stage velocity relative to lab.
-# 			- Object's velocity with respect to the lab.
-# 			- Fluid velocity with respect to the lab.
-# 			Note that in gravity machine v2.0 and higher, the optical system is fixed relative to lab.
-# 			Therefore displacements relative to the optical system are displacements relative to the lab.
-# 			For earlier Gravity machine versions the optical system is fixed in Z but moving in X and Y. 
+	def compute_fluid_relative_disp(self, overwrite_flag = False, save = False):
+	
+		self.compute_fluid_velocity_timeseries(overwrite_velocity = overwrite_flag)
 
-# 			Stage velocity relative to lab (recorded in track data: Z)
-# 			Fluid velocity relative to lab (from PIV)
-# 			Object's velocity relative to lab (from object motion in the image)
-
-# 			We want to compute the object's velocity relative to the fluid.
-
-# 			Vector operations to calculate V_objFluid which is what we want.
-# 			 Note: Vz is the object velocity relative to the stage V_objStage
-# 			 V_objLab: is measured from the displacement of the object centroid in the image. 
-# 			 V_objStage = V_objLab - V_stageLab
-# 			 Therefore, 
-# 				 V_stageLab = V_objLab - VobjStage   ---- (1)
-			 
-# 			 The measured fluid velocity using PIV is:
-# 				 V_measured = V_stageLab + V_fluidStage
-# 				 Therefore, 
-# 				 V_fluidStage = V_measured - V_stageLab ---- (2)
-# 				 We can substitute for V_stageLab from (1) to get V_fluidStage
-				 
-# 			 Now, 
-# 				 V_objFluid = V_objStage - V_fluidStage
-				 
-# 		"""
-# 		# self.compute_fluid_velocity_timeseries(overwrite_velocity = overwrite_flag)
-
-# 		# V_z is the object's velocity relative to the stage, V_z_image is object's velocity relative to the image
-# 		Vz_stageLab = self.data['V_z_image'][self.imageIndex_array] - self.data['V_z'][self.imageIndex_array]
-# 		Vz_fluidStage = self.v_avg_array - Vz_stageLab
-# 		Vz_objFluid = self.data['V_z'][self.imageIndex_array] - Vz_fluidStage
-# 		Z_objFluid =  utils.compute_displacement_from_velocity(x_data = self.data['Time'][self.imageIndex_array], y_data = Vz_objFluid)
-# 		#----------------------------------------------------------------------------------------
-# 		# Correcting X-velocity
-# 		#----------------------------------------------------------------------------------------
-# 		# For GM v > 2.0 data (Fixed Optical System, Moving Stage in X,Y, Theta)
+		# V_z is the object's velocity relative to the stage, V_z_image is object's velocity relative to the image
+		Vz_stageLab = np.array(self.data['V_z_image'].iloc[self.imageIndex_array]) - np.array(self.data['V_z'][self.imageIndex_array])
+		Vz_fluidStage = np.array(self.v_avg_array) - np.array(Vz_stageLab)
+		Vz_objFluid = np.array(self.data['V_z'].iloc[self.imageIndex_array]) - np.array(Vz_fluidStage)
+		Z_objFluid =  utils.compute_displacement_from_velocity(x_data = self.data['Time'].iloc[self.imageIndex_array], y_data = Vz_objFluid)
+		#----------------------------------------------------------------------------------------
+		# Correcting X-velocity
+		#----------------------------------------------------------------------------------------
+		# For GM v > 2.0 data (Fixed Optical System, Moving Stage in X,Y, Theta)
 		
-# 		# Note that if the X-centroid of the object is not available then the velocity contribution of V_objLab 
-# 		# is assumed to be zero.
-# 		Vx_stageLab = -self.Vx[self.imageIndex_array] + self.Vx_objLab[self.imageIndex_array]
-# 		Vx_fluidStage = self.u_avg_array - Vx_stageLab
-# 		Vx_objFluid = self.Vx[self.imageIndex_array] - Vx_fluidStage
-# 		X_objFluid =  utils.compute_displacement_from_velocity(x_data = self.data['Time'][self.imageIndex_array], y_data = Vx_objFluid)
-# 		#----------------------------------------------------------------------------------------
-# 		# Uncomment block below for GM < v2.0 data
-# 		# Optical system fixed in Z, moving in X and Y
+		# Note that if the X-centroid of the object is not available then the velocity contribution of V_objLab 
+		# is assumed to be zero.
 
-# #            Vx_objFluid = self.Vx_objStage[self.imageIndex_array] - self.u_avg_array
-# #        
-# #            self.X_objFluid =  self.utils.compute_displacement_from_velocity(x_data = self.data['Time'][self.imageIndex_array], 
-# #                                                        y_data = Vx_objFluid)  
-# 		#----------------------------------------------------------------------------------------
+		# Vx_stageLab = self.data.iloc['V_x_image'].iloc[self.imageIndex_array] -self.data['V_x'].iloc[self.imageIndex_array] + 
+		# Vx_fluidStage = self.u_avg_array - Vx_stageLab
+		# Vx_objFluid = self.Vx[self.imageIndex_array] - Vx_fluidStage
+		# X_objFluid =  utils.compute_displacement_from_velocity(x_data = self.data['Time'][self.imageIndex_array], y_data = Vx_objFluid)
+		#----------------------------------------------------------------------------------------
+		# Uncomment block below for GM < v2.0 data
+		# Optical system fixed in Z, moving in X and Y
+
+		Vx_objFluid = np.array(self.data['V_x'].iloc[self.imageIndex_array]) - np.array(self.u_avg_array)
+		X_objFluid =  utils.compute_displacement_from_velocity(x_data = self.data['Time'].iloc[self.imageIndex_array], y_data = Vx_objFluid)  
+		#----------------------------------------------------------------------------------------
 	   
-# 		# Store the displacements relative to the fluid in the derived data (X and Z positions become the calculated positions relative to the fluid)
-# 		self.derived_data['X'] = X_objFluid
-# 		self.derived_data['Z'] = Z_objFluid  
-# 		self.derived_data['V_x_objFluid'] = Vx_objFluid 
-# 		self.derived_data['V_z_objFluid'] = Vz_objFluid
+		# Store the displacements relative to the fluid in the derived data (X and Z positions become the calculated positions relative to the fluid)
+		self.derived_data['X'] = X_objFluid
+		self.derived_data['Z'] = Z_objFluid  
+		self.derived_data['V_x_objFluid'] = Vx_objFluid 
+		self.derived_data['V_z_objFluid'] = Vz_objFluid
 
-# 		if(save == True):
-# 			# Save the corrected data in a separate CSV file
-# 			self.save_corrected_track()
-
+		if(save == True):
+			# Save the corrected data in a separate CSV file
+			self.save_corrected_track()
 
 	def save_corrected_track(self, overwrite = True):
 
