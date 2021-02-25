@@ -24,3 +24,11 @@ def velocity_central_diff(time, data):
             velocity[i] = (data[i+1] - data[i-1])/(time[i+1] - time[i-1])
             
     return velocity
+
+
+def compute_displacement_from_velocity(self, x_data = None, y_data = None):
+        """ 
+            Compute the displacement by integrating a velocity time series. Uses trapezoidal rule for integration.
+        """
+        disp = scipy.integrate.cumtrapz(y = y_data, x = x_data, initial = 0)
+        return disp
