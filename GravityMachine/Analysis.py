@@ -4,6 +4,16 @@
 Created on Fri Feb  1 01:04:22 2019
 @author: deepak
 """
+# Reload modules
+import sys
+if 'init_modules' in globals().keys():
+    # second or subsequent run: remove all but initially loaded modules
+    for m in sys.modules.keys():
+        if m not in init_modules:
+            del(sys.modules[m])
+else:
+    # first run: find out which modules were initially loaded
+    init_modules = sys.modules.keys()
 import os
 import numpy as np
 import pandas as pd
