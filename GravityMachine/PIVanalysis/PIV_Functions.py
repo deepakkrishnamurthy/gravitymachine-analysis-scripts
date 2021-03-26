@@ -143,22 +143,27 @@ def pointInCircle(x,y,x_cent,y_cent,radius):
 #==============================================================================
 # PIV Analysis
 #==============================================================================
-def doPIV(frame_a_color,frame_b_color, dT = 1.0, win_size = 64, overlap = 32, searchArea = 64, apply_clahe = False):
-       
-    frame_a = cv2.cvtColor(frame_a_color , cv2.COLOR_BGR2GRAY)
-    frame_b = cv2.cvtColor(frame_b_color , cv2.COLOR_BGR2GRAY)
+def doPIV(frame_a, frame_b, dT = 1.0, win_size = 64, overlap = 32, searchArea = 64, apply_clahe = False):
     
+    # Check if image is color or grayscale and convert to grayscale if it is color   
+    try:
+        imH, imW, channels = np.shape(frame_a)
+        if(channels > 1):
+            frame_a = cv2.cvtColor(frame_a , cv2.COLOR_BGR2GRAY)
+            frame_b = cv2.cvtColor(frame_b , cv2.COLOR_BGR2GRAY)
+
+    except:
+        pass
+
     if(apply_clahe is True):
     
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(12,12))
         frame_a = clahe.apply(frame_a)
         frame_b = clahe.apply(frame_b)
-
-#    u, v, sig2noise = openpiv.process.extended_search_area_piv( frame_a.astype(np.int32), frame_b.astype(np.int32), window_size = win_size, overlap = overlap, dt = dT, search_area_size = searchArea, sig2noise_method='peak2peak' )
     
-    u, v, sig2noise = pyprocess.extended_search_area_piv( frame_a.astype(np.int32), frame_b.astype(np.int32), corr_method='fft', window_size = win_size, overlap = overlap, dt = dT, search_area_size = searchArea, sig2noise_method='peak2peak' )
+    u, v, sig2noise = pyprocess.extended_search_area_piv(frame_a.astype(np.int32), frame_b.astype(np.int32), window_size = win_size, overlap = overlap, dt = dT, search_area_size = searchArea, sig2noise_method='peak2mean', normalized_correlation=True)
 
-    x, y = pyprocess.get_coordinates( image_size=frame_a.shape, window_size = win_size, overlap = overlap )
+    x, y = pyprocess.get_coordinates(frame_a.shape, win_size, overlap)
 
     return x,y,u,v, sig2noise
 
@@ -198,11 +203,10 @@ def plotValidvectors(image, x,y, u , v, mask):
     
     
 
-def overlayPIVdata(image,x,y,u,v, orgContour = None, Centroids = None, pixelPermm = 1,figname=1,show = 0,saveFileName=None):
+def overlayPIVdata(image, x, y, u, v, figname = None, orgContour = None, Centroids = None, pixelPermm = 1,show = 0,saveFileName=None):
     # Plots the PIV vector field overlaid on the raw image
     imH, imW, *rest = np.shape(image)
-    
-    
+
     if(orgContour is not None):
         print('masking the vector field...')
         
@@ -214,11 +218,12 @@ def overlayPIVdata(image,x,y,u,v, orgContour = None, Centroids = None, pixelPerm
         print(np.sum(maskInside))
             
     U = velMag(u,v)
-    
-    
 #    y = np.flipud(y)
-    
-    fig = plt.figure(figname)
+    if(figName is not None):
+        fig = plt.figure(figname)
+    else:
+        fig = plt.figure()
+
     plt.clf()
     ax =plt.gca()
 

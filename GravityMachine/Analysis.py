@@ -7,13 +7,13 @@ Created on Fri Feb  1 01:04:22 2019
 # Reload modules
 import sys
 if 'init_modules' in globals().keys():
-    # second or subsequent run: remove all but initially loaded modules
-    for m in sys.modules.keys():
-        if m not in init_modules:
-            del(sys.modules[m])
+	# second or subsequent run: remove all but initially loaded modules
+	for m in sys.modules.keys():
+		if m not in init_modules:
+			del(sys.modules[m])
 else:
-    # first run: find out which modules were initially loaded
-    init_modules = sys.modules.keys()
+	# first run: find out which modules were initially loaded
+	init_modules = sys.modules.keys()
 import os
 import numpy as np
 import pandas as pd
@@ -150,7 +150,7 @@ class GravityMachineTrack:
 		if(not os.path.exists(self.PIVfolder)):
 			os.makedirs(self.PIVfolder)
 
-		self.piv_settings = {'window size': 64, 'overlap': 32, 'search area':64}
+		self.piv_settings = {'window size': 64, 'overlap': 32, 'search area':64, 'scale-factor':5}
 
 	def regularize_time_intervals(self):
 		""" Resample the data on a regular time grid
@@ -464,17 +464,18 @@ class GravityMachineTrack:
 		
 	
 		
-	def compute_background_fluid_velocity(self, image_a, image_b, deltaT = 1, overwrite_piv = False, overwrite_velocity = False, masking = False, obj_position = None, obj_size = 0.1):
-		"""
-		Computes the mean fluid velocity given a pair of images, 
-		far away from objects (if any objects are present).
-		
+	def compute_background_fluid_velocity(self, image_a, image_b, deltaT = 1, overwrite_piv = False, overwrite_velocity = False, masking = False, obj_position = None, obj_size = 0.1, save = False, test = False):
+		""" Computes the mean fluid velocity given a pair of images, far away from objects (if any objects are present).
 		"""        
 		#--------------------------------------------------------------------------
 		# Load the frame-pair into memory
 		#--------------------------------------------------------------------------
-		frame_a_color = cv2.imread(os.path.join(self.track_folder, self.image_dict[image_a], image_a))
-		frame_b_color = cv2.imread(os.path.join(self.track_folder, self.image_dict[image_b], image_b))
+		if(test == True):
+			frame_a_color = cv2.imread(os.path.join('tests/piv_tests', image_a))
+			frame_b_color = cv2.imread(os.path.join('tests/piv_tests', image_b))
+		else:
+			frame_a_color = cv2.imread(os.path.join(self.track_folder, self.image_dict[image_a], image_a))
+			frame_b_color = cv2.imread(os.path.join(self.track_folder, self.image_dict[image_b], image_b))
 
 		# Plot the object's position on the image to verify it is correct
 #        print('Circle diameter: {}'.format(int(2*self.scaleFactor*self.obj_diameter*self.pixelPermm)))
@@ -487,27 +488,43 @@ class GravityMachineTrack:
 		#--------------------------------------------------------------------------
 		# Perform the PIV computation
 		#--------------------------------------------------------------------------
-		saveFile = os.path.join(self.PIVfolder,'PIV_' + image_a[:-4]+'.pkl')
-	
+		
+		if(image_a is not None):
+			saveFile = os.path.join(self.PIVfolder,'PIV_' + image_a[:-4]+'.pkl')
+		else:
+			saveFile = os.path.join(self.PIVfolder,'PIV_' + 'test'+'.pkl')
+
+
 		if(not os.path.exists(saveFile) or overwrite_piv):
 			print('-'*50)
 			print('Analyzing Frame pairs: {} and {} \n'.format(image_a,image_b))
 			print('-'*50)
-			x,y,u,v, sig2noise = PIV_Functions.doPIV(frame_a_color,frame_b_color, dT = deltaT, win_size = self.piv_settings['window size'], overlap = self.piv_settings['overlap'], searchArea = self.piv_settings['search area'], apply_clahe = False)
+			x,y,u,v, sig2noise = PIV_Functions.doPIV(frame_a_color, frame_b_color, dT = deltaT, win_size = self.piv_settings['window size'], overlap = self.piv_settings['overlap'], searchArea = self.piv_settings['search area'], apply_clahe = False)
 			
-			u, v, mask = PIV_Functions.pivPostProcess(u,v,sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
+			# @@@ IMPORTANT: We need to invert the sign of the y velocity since it is flipped relative to the image (openpiv API)
+			v = -v
+
+			print('Max sig2noise: {}'.format(np.nanmax(sig2noise)))
+			print('Min sig2noise: {}'.format(np.nanmin(sig2noise)))
+			print('Mean sig2noise: {}'.format(np.nanmean(sig2noise)))
+			
+			u, v, mask = PIV_Functions.pivPostProcess(u, v, sig2noise, sig2noise_min = 1.5, smoothing_param = 0)
+
 			u,v = (PIV_Functions.data2RealUnits(data = u,scale = 1/(self.pixelPermm)), PIV_Functions.data2RealUnits(data = v,scale = 1/(self.pixelPermm)))
 			#--------------------------------------------------------------------------
 			# Threshold the image to extract the object regions
 			#--------------------------------------------------------------------------
 			if(masking and obj_position is None):
-				Contours = PIV_Functions.findContours(frame_a_color,self.threshLow,self.threshHigh,'largest')
+				Contours = PIV_Functions.findContours(frame_a_color, self.threshLow, self.threshHigh, 'largest')
 			else:
 				Contours = np.nan
 			
-			
-			with open(saveFile, 'wb') as f:  # Python 3: open(..., 'wb')
-				pickle.dump((x, y , u, v, Contours), f)
+			if(image_a is not None):
+				saveFile = os.path.join(self.PIVfolder,'PIV_' + image_a[:-4]+'.pkl')
+
+			if(save):
+				with open(saveFile, 'wb') as f:  # Python 3: open(..., 'wb')
+					pickle.dump((x, y , u, v, Contours), f)
 			
 		else:
 			#--------------------------------------------------------------------------
@@ -521,7 +538,6 @@ class GravityMachineTrack:
 			print(np.nanmean(u+v))
 			PIV_Functions.overlayPIVdata(frame_a_color, x, y, u, v, Centroids = obj_position)
 
-		   
 #        Centroids = PIV_Functions.findCentroids(Contours)
 #        plt.figure()
 #        plt.imshow(maskInsideCircle)
@@ -543,12 +559,11 @@ class GravityMachineTrack:
 				x_cent, y_cent = obj_position
 				radius = round((self.obj_diameter/2.0)*self.pixelPermm)
 				
-			maskInsideCircle = PIV_Functions.pointInCircle(x,y,x_cent,y_cent,self.scaleFactor*radius)
+			maskInsideCircle = PIV_Functions.pointInCircle(x,y,x_cent,y_cent,self.piv_settings['scale-factor']*radius)
 
 			u[maskInsideCircle] = np.nan
 			v[maskInsideCircle] = np.nan 
-				
-#            assert(np.nanmean(u+v) is not np.nan)
+			assert(np.nanmean(u+v) is not np.nan)
 #            print(x_cent, y_cent)
 #            print(radius)
 #            
@@ -580,7 +595,7 @@ class GravityMachineTrack:
 	  
 	def compute_fluid_velocity_timeseries(self, overwrite_velocity = False, masking = False):
 		# 
-		""" Computes the averge background fluid velocity at each time point during which an image is available and stores the result.
+		""" Computes the average background fluid velocity at each time point during which an image is available and stores the result.
 
 			For a tracked object, this velocity is equal and opposite to the object's velocity relative to the fluid. 
 		
