@@ -24,12 +24,3 @@ Ensure that at this stage you are inside the conda environment. You can check th
 ## Install the required dependencies
 	pip install -r requirements.txt
 
-## OpenPIV installation
-
-Use conda
-
-	conda install -c conda-forge openpiv
-Or use pip
-
-	pip install numpy cython
-	pip install openpiv --pre
