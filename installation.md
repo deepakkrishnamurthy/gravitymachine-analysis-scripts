@@ -27,5 +27,4 @@ Ensure that at this stage you are inside the conda environment. You can check th
 ## OpenPIV installation
 Or use pip
 
-	pip install numpy cython
 	pip install openpiv
