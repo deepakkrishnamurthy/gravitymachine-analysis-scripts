@@ -16,3 +16,5 @@ six==1.15.0
 wincertstore==0.2
 seaborn==0.11.1
 tqdm==4.58.0
+jupyter==1.0.0
+openpiv==0.23.4

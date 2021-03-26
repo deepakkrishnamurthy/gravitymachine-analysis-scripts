@@ -219,7 +219,7 @@ def overlayPIVdata(image, x, y, u, v, figname = None, orgContour = None, Centroi
             
     U = velMag(u,v)
 #    y = np.flipud(y)
-    if(figName is not None):
+    if(figname is not None):
         fig = plt.figure(figname)
     else:
         fig = plt.figure()
