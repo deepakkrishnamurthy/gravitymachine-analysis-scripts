@@ -24,3 +24,8 @@ Ensure that at this stage you are inside the conda environment. You can check th
 ## Install the required dependencies
 	pip install -r requirements.txt
 
+<<<<<<< HEAD
+=======
+## OpenPIV installation
+	pip install openpiv
+>>>>>>> master
