@@ -45,17 +45,20 @@ except:
 
 units = {'Time':'(s)', 'X':'(mm)','Y':'(mm)','Z':'(mm)', 'V_x': '(mm/s)','V_y': '(mm/s)','V_z': '(mm/s)', 'Theta':'(rad)'}
 imgFormats = ['.png', '.svg']
-# Map between the header names in the CSV file and the internal variable names
-# X_objStage  Y_objStage  Z_objStage  Theta_stage X_image Z_image
-# VARIABLE_MAPPING = {'Time':'Time', 'X':'X_objStage','Y':'Y_objStage','Z':'Z_objStage','Image name':'DF1', 'X_image':'X_image', 'Z_image':'Z_image'}
 
-VARIABLE_MAPPING = {'Time':'Time', 'X':'Xobj','Y':'Yobj','Z':'ZobjWheel','Image name':'Image name', 'X_image':'Xobj_image', 'Z_image':'Zobj'}
+# @@@ CHOOSE THE CORRECT VARIABLE MAPPING @@@ 
+# Map between the header names in the CSV file and the internal variable names
+# Newer variable mapping (GM v >= 2.0)
+VARIABLE_MAPPING = {'Time':'Time', 'X':'X_objStage','Y':'Y_objStage','Z':'Z_objStage','Image name':'DF1', 'X_image':'X_image', 'Z_image':'Z_image'}
+
+# Older variable mapping (GM v < 2.0)
+# VARIABLE_MAPPING = {'Time':'Time', 'X':'Xobj','Y':'Yobj','Z':'ZobjWheel','Image name':'Image name', 'X_image':'Xobj_image', 'Z_image':'Zobj'}
 
 
 class GravityMachineTrack:
 
 	def __init__(self, track_folder = None, track_file = None, organism = 'Organism', condition = 'Condition', Tmin=0, Tmax=0, 
-		image_streams = 'Image name', pixelPermm = 314, flip_z = False, rescale_time = True, rescale_z = True):
+		image_streams = 'Image name', pixelPermm = 314, flip_z = False, rescale_time = True, rescale_z = True, load_images = True):
 		""" Gravity Machine Analysis object for loading, interacting, analyzing and plotting Gravity Machine data.
 
 		"""
@@ -83,7 +86,7 @@ class GravityMachineTrack:
 		print(self.ColumnNames)
 		print(VARIABLE_MAPPING)
 
-		# The data MUSt have timestamps
+		# The data MUST have timestamps
 		assert('Time' in self.ColumnNames)
 
 		if(rescale_time == True):
@@ -99,6 +102,10 @@ class GravityMachineTrack:
 		# Since the Z trajectory has no physical limits, rescale it to set z=0 for the start of the track
 		if(rescale_z == True):
 			self.df[VARIABLE_MAPPING['Z']] = self.df[VARIABLE_MAPPING['Z']] - self.df[VARIABLE_MAPPING['Z']][self.df.index[0]]
+		
+		# Remove duplicate rows if they exist
+		self.df = self.df.drop_duplicates(subset='Time', ignore_index = True)
+
 		# Internal representation of the track data
 		for key in VARIABLE_MAPPING:
 			if(VARIABLE_MAPPING[key] in self.ColumnNames):
@@ -111,8 +118,9 @@ class GravityMachineTrack:
 
 		self.regularize_time_intervals()
 		self.initialize_data()
-		self.build_image_dict()
-		self.create_image_index()
+		if(load_images):
+			self.build_image_dict()
+			self.create_image_index()
 
 		self.plots_folder = os.path.join(self.track_folder, 'Plots')
 
