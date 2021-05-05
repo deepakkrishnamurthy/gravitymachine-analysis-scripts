@@ -618,7 +618,7 @@ class GravityMachineTrack:
 		self.fluid_velocity_file = 'fluid_velocity_timeseries_'+ str(self.Tmin)+'_' + str(self.Tmax) + '.csv'
 		self.fluid_velocity_path = os.path.join(self.fluid_velocity_folder, self.fluid_velocity_file)
 
-		self.initialize_piv_analysis()
+		# self.initialize_piv_analysis()
 
 		if(not os.path.exists(self.fluid_velocity_folder)):
 			os.makedirs(self.fluid_velocity_folder)
