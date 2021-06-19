@@ -27,7 +27,6 @@ import seaborn as sns
 plt.close("all")
 import cv2
 import GravityMachine.imageprocessing.imageprocessing_utils as ImageProcessing
-from GravityMachine._def import VARIABLE_MAPPING, units
 import GravityMachine.utils as utils
 import imp
 imp.reload(utils)
@@ -268,16 +267,38 @@ class GravityMachineTrack:
 		""" Create an index of all time points for which an image is available.
 			All time points may not have an index available so this provides a convenient indexinf of all time points with an associated image.
 		"""
+		print('Building image index...')
 		self.imageIndex = []
 		for ii in range(self.trackLen):
 			if(self.data['Image name'][ii] is not np.nan):
 #                print(self.data['Image name'][ii])
 				self.imageIndex.append(ii)
-				
+		
 		# Open the first image and save the image size
-		imageName = self.data['Image name'][self.imageIndex[0]]
-		image_a = cv2.imread(os.path.join(self.track_folder,self.image_dict[imageName],imageName))
-		self.imH, self.imW, *rest = np.shape(image_a)
+		flag_success = False
+		count_max = 50
+		count = 0
+		imageName = None
+		while (not flag_success):
+			if(count >= count_max):
+				print('Error in getting image properties!')
+				break
+			try:
+				imageName = self.data['Image name'][self.imageIndex[count]]
+				print(imageName)
+				count += 1
+				if imageName and imageName != '[]':
+					flag_success = True
+					image_a = cv2.imread(os.path.join(self.track_folder,self.image_dict[imageName],imageName))
+					self.imH, self.imW, *rest = np.shape(image_a)
+					print('Image properties found!')
+					break
+			except:
+				count+=1
+				continue
+
+
+		
 
 		
 	def set_color_thresholds(self, overwrite = False):
@@ -291,9 +312,27 @@ class GravityMachineTrack:
 		
 		if(not os.path.exists(os.path.join(self.track_folder, saveFile)) or overwrite):
 			# If a color threshold does not exist on file then display an image and allow the user to choose the thresholds
-			imageName = self.data['Image name'][self.imageIndex[0]]
-			image_a = cv2.imread(os.path.join(self.track_folder,self.image_dict[imageName],imageName))
-			self.imH, self.imW, *rest = np.shape(image_a)
+			flag_success = False
+			count_max = 50
+			count = 0
+			imageName = None
+			while (not flag_success):
+				if(count >= count_max):
+					print('Error in getting image properties!')
+					break
+				try:
+					imageName = self.data['Image name'][self.imageIndex[count]]
+					print(imageName)
+					count += 1
+					if imageName and imageName != '[]':
+						flag_success = True
+						image_a = cv2.imread(os.path.join(self.track_folder,self.image_dict[imageName],imageName))
+						self.imH, self.imW, *rest = np.shape(image_a)
+						print('Image properties found!')
+						break
+				except:
+					count+=1
+					continue
 	
 			print('Image Width: {} px \n Image Height: {} px'.format(self.imW, self.imH))
 			
