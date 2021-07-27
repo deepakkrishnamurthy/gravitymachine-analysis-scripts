@@ -3,12 +3,15 @@
 ## What it is
 This repo contains python and jupyter notebook scripts used for [Gravity Machine](https://gravitymachine.org) data analysis. 
 
+To first visualize Gravity Machine data use [this repository](https://github.com/deepakkrishnamurthy/gravitymachine-analysis-gui).
+
 The repo implements:
 - Simple plotting and analysis functionality for 3D trajectories (like those from [Gravity Machine data](https://gravitymachine.org/gallery)).
-- Particle-Image-Velocimetry (using [OpenPIV](https://github.com/OpenPIV/openpiv-python.git)) of [Gravity Machine image data](https://gravitymachine.org/gallery). Including using measured fluid velocities to compute true displacements relatuve to fluid. 
 - Mean-Squared-Displacement calculations.
 - [Weighted-Least-Squares (Including correlation in error)](https://github.com/impaktor/wlsice.git) fitting for simple model building from trajectories.
 - Calculating and plotting of trajectory statistics. 
+- Particle-Image-Velocimetry (using [OpenPIV](https://github.com/OpenPIV/openpiv-python.git)) of [Gravity Machine image data](https://gravitymachine.org/gallery). Including using measured fluid velocities to compute true displacements relatuve to fluid. 
+
 
 ## Getting started
 To install the software dependencies follow the instructions in [installation.md](https://github.com/deepakkrishnamurthy/gravitymachine-analysis-scripts/blob/2ace1f3f49892c10a9a2dd20e4d2d5d86999c447/installation.md)
