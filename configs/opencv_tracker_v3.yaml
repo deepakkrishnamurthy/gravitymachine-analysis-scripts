@@ -2,11 +2,11 @@ input:
   # Relative paths are resolved from this config file's directory.
   # image_glob: "../tests/piv_tests/*.tif"
   # Pyrite example:
-  # image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/pyrite_2024-11-14 20-00-15.825503_good/0"
+  image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/pyrite_2024-11-14 20-00-15.825503_good/0"
 
   # Plume particle example:
   # image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/2024_11_14_PyriteParticles/plume_particle_2_2024-11-14 17-39-37.245115/4"
-  image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/2024_11_14_PyriteParticles/plume_particle_4_20x_2024-11-14 18-04-9.185642/0"
+  # image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/2024_11_14_PyriteParticles/plume_particle_4_20x_2024-11-14 18-04-9.185642/0"
   extensions:
     - ".tif"
     - ".bmp"
