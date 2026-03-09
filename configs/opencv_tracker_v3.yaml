@@ -1,16 +1,32 @@
 input:
   # Relative paths are resolved from this config file's directory.
-  # image_glob: "../tests/piv_tests/*.tif"
-  # Pyrite example:
-  image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/pyrite_2024-11-14 20-00-15.825503_good/0"
+  # Use `base_dir` to point at the experiment folder that contains numbered subfolders (0, 1, 2, ...).
+  # Pyrite example
+  base_dir: "/Volumes/Extreme SSD/deep-sea-particles-gm/raw/pyrite_2024-11-14 20-00-15.825503_good"
 
-  # Plume particle example:
-  # image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/2024_11_14_PyriteParticles/plume_particle_2_2024-11-14 17-39-37.245115/4"
-  # image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/2024_11_14_PyriteParticles/plume_particle_4_20x_2024-11-14 18-04-9.185642/0"
+  # Plume particle example
+  # base_dir: "/Volumes/Extreme SSD/deep-sea-particles-gm/raw/plume_particle_2_2024-11-14 17-39-37.245115"
+
+  raw_root: "/Volumes/Extreme SSD/deep-sea-particles-gm/raw"
+  processed_root: "/Volumes/Extreme SSD/deep-sea-particles-gm/processed"
   extensions:
     - ".tif"
     - ".bmp"
     - ".png"
+slider:
+  enabled: true
+  window_name: "Select Start Frame ({folder})"
+  trackbar_name: "Frame"
+  start_index: 0
+  instructions: "Move the slider for folder {folder}; press 's' to lock in the frame, 'x' to skip, or 'q'/Esc to end processing."
+  font_scale: 1.1
+threshold_slider:
+  enabled: true
+  window_name: "Threshold Tuning ({folder})"
+  min: 0
+  max: 255
+  instructions: "Adjust threshold, press ENTER/SPACE to accept or 'c'/Esc to skip."
+  font_scale: 1.0
 
 tracker:
   # Default allowed trackers: CSRT (legacy) plus modern, efficient choices.
@@ -31,8 +47,8 @@ crop:
   height: 600
 
 output:
-  # When unspecified, the script creates a folder named <input_folder>_cropped beside the source.
-  crops_subdir: "registered_crops"
+  # When unspecified, the script creates "cropped" inside the experiment directory.
+  crops_subdir: "cropped"
   rotation: "ccw"
   metadata_csv: "tracking_metadata.csv"
   summary_json: "frame_rate_summary.json"
