@@ -1,0 +1,43 @@
+input:
+  # Relative paths are resolved from this config file's directory.
+  # image_glob: "../tests/piv_tests/*.tif"
+  # Pyrite example:
+  # image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/pyrite_2024-11-14 20-00-15.825503_good/0"
+
+  # Plume particle example:
+  # image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/2024_11_14_PyriteParticles/plume_particle_2_2024-11-14 17-39-37.245115/4"
+  image_glob: "/Volumes/Extreme SSD/deep-sea-particles-gm/2024_11_14_PyriteParticles/plume_particle_4_20x_2024-11-14 18-04-9.185642/0"
+  extensions:
+    - ".tif"
+    - ".bmp"
+    - ".png"
+
+tracker:
+  # Default allowed trackers: CSRT (legacy) plus modern, efficient choices.
+  type: "csrt"
+  allowed_types:
+    - "csrt"
+    - "kcf"
+    - "mosse"
+  selection_window: "Select Tracking ROI"
+
+crop:
+  # select_roi_size: choose crop width/height interactively on first frame
+  # fixed_size: use width/height below
+  # tracker_box: crop size follows tracker bbox
+  mode: "fixed_size"
+  selection_window: "Select Crop ROI Size"
+  width: 600
+  height: 600
+
+output:
+  # When unspecified, the script creates a folder named <input_folder>_cropped beside the source.
+  crops_subdir: "registered_crops"
+  rotation: "ccw"
+  metadata_csv: "tracking_metadata.csv"
+  summary_json: "frame_rate_summary.json"
+  keep_source_stem: true
+  save_extension: ".tif"
+  save_color: true
+  show_preview: true
+  preview_window: "Tracking Preview"
