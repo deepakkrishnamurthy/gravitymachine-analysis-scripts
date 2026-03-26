@@ -2,10 +2,10 @@ input:
   # Relative paths are resolved from this config file's directory.
   # Use `base_dir` to point at the experiment folder that contains numbered subfolders (0, 1, 2, ...).
   # Pyrite example
-  base_dir: "/Volumes/Extreme SSD/deep-sea-particles-gm/raw/pyrite_2024-11-14 20-00-15.825503_good"
+  # base_dir: "/Volumes/Extreme SSD/deep-sea-particles-gm/raw/pyrite_2024-11-14 20-00-15.825503_good"
 
   # Plume particle example
-  # base_dir: "/Volumes/Extreme SSD/deep-sea-particles-gm/raw/plume_particle_2_2024-11-14 17-39-37.245115"
+  base_dir: "/Volumes/Extreme SSD/deep-sea-particles-gm/raw/plume_particle_4_2024-11-14 17-56-11.021038"
 
   raw_root: "/Volumes/Extreme SSD/deep-sea-particles-gm/raw"
   processed_root: "/Volumes/Extreme SSD/deep-sea-particles-gm/processed"
